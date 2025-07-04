@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Gabarito } from "next/font/google";
-import "./globals.css";
-import Providers from "./providers";
+import "../globals.css";
+import Providers from "../../providers";
 import { ThemeProvider } from "@/context/ThemeContext";
+import Header from "@/components/landing-component/Header";
+import { Footer } from "@/components/landing-component/Footer";
 
 const gabarito = Gabarito({
   subsets: ["latin"],
@@ -14,7 +16,7 @@ export const metadata: Metadata = {
   description: "An Online Medic-care",
 };
 
-export default function RootLayout({
+export default function AdminLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -23,7 +25,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${gabarito.variable} antialiased`}>
         <ThemeProvider>
+          <Header />
           <Providers>{children}</Providers>
+          <Footer />
         </ThemeProvider>
       </body>
     </html>

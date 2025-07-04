@@ -1,21 +1,19 @@
-import Header from "@/components/landing-component/Header";
-import { Footer } from "@/components/landing-component/Footer";
 import Image from "next/image";
 import { ChevronRight, Cross, Search } from "lucide-react";
-import first_medic from "../../public/assets/medic2_img.svg";
-import consult from "../../public/assets/consult.svg";
-import firstaid from "../../public/assets/firstaid.svg";
+import first_medic from "../../../public/assets/medic2_img.svg";
+import consult from "../../../public/assets/consult.svg";
+import realmap from "../../../public/assets/real-map.png";
+import firstaid from "../../../public/assets/firstaid.svg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import Carousel from "@/components/custom/Carousel";
-
-import { Card, CardContent } from "@/components/ui/card";
+import Howitworks from "@/components/landing-component/Howitworks";
+import TestimonialsCarousel from "@/components/ui/TestimonialCarousel";
 
 export default function Home() {
   return (
     <>
-      <Header />
       <main className="bg-white">
         {/* Hero section */}
         <section className="relative pt-20 lg:pt-32">
@@ -52,7 +50,7 @@ export default function Home() {
                     <Input
                       type="text"
                       placeholder="Conditions, Procedures"
-                      className="rounded-full w-full pl-10 pr-4 py-2 focus:border-none"
+                      className="rounded-full w-full pl-10 pr-4 py-4 focus:outline-none"
                     />
                     <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
                   </div>
@@ -106,12 +104,12 @@ export default function Home() {
 
         {/* Consultation section */}
         <section className="mt-[18px]">
-          <div className="container mx-auto flex flex-col md:flex-row px-4 sm:px-6 lg:px-8 items-center md:items-start justify-center ">
+          <div className="container mx-auto flex flex-col gap-6 md:flex-row px-4 sm:px-6 lg:px-8 md:items-start justify-center">
             <div className="order-2 md:order-1">
               <Image src={consult} alt="consult svg" />
             </div>
             <div className="order-1 ">
-              <h2 className="text-[#212529] text-[30px] font-semibold mt-[35px] leading-10">
+              <h2 className="text-[#212529] text-[30px] sm:text-[40px] font-semibold mt-[35px] leading-10">
                 Online appointments
               </h2>
               <p className="leading-5 mt-[30px] text-sm font-light tracking-tight">
@@ -174,6 +172,7 @@ export default function Home() {
             <div className="grid md:grid-cols-3 gap-2 md:gap-x-4 mt-8">
               {Array.from({ length: 12 }).map((_, index) => (
                 <Button
+                  key={index}
                   variant="ghost"
                   size="xl"
                   className="bg-[#ffff] text-[16px] font-bold leading-5 text-left text-[rgb(29,136,74)] flex justify-between border-1 border-[rgb(29,136,74)] rounded-[50px] pt-[16px] pr-[20px] pb-[15px] pl-[25px]"
@@ -210,8 +209,56 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* How it works */}
+        <section className="mt-[2rem] bg-[#F6FAFD]">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col mx-auto md:w-[80%] items-center">
+              <h1 className="pt-[90px] text-[rgb(51, 51, 51)] text-[32px] font-semibold tracking-normal">
+                How It Works
+              </h1>
+              <p className="px-5 text-[14px] font-normal tracking-tight leading-6 text-[#828282]">
+                Baba Telehealth provides access to a wide range of specialists
+                and doctors with the right experience and expertise for your own
+                unique concerns.
+              </p>
+            </div>
+
+            {/* How it works image selector */}
+            <div>
+              <Howitworks />
+            </div>
+          </div>
+        </section>
+
+        {/* Testimonials */}
+        <section className="mt-2rem bg-[#f9f8fa]">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-18">
+            <div className="flex flex-col items-center justify-center lg:flex-row gap-6 px-[20px] ">
+              <div className="">
+                <Image src={realmap} alt="Map image" width={492} height={394} />
+              </div>
+              <div className="">
+                <p className="text-[#1d884a] text-[16px] font-bold mb-[15px]">
+                  Testimonials
+                </p>
+                <h1 className="font-semibold text-[32px] text-[#333] mb-[15px]">
+                  Our customers love using PrimeCare
+                </h1>
+
+                <p className="mb-[20px] text-[#828282] text-[14px] font-normal">
+                  Check out what they’re saying about us!
+                </p>
+
+                {/* Testimonial carousel */}
+                <div className="pt-8">
+                  <TestimonialsCarousel />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
-      <Footer />
     </>
   );
 }

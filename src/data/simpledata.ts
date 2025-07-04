@@ -57,3 +57,27 @@ export const carouselItems: CarouselItem[] = [
     desc: "Book appointment for women's health, Pregnancy and Diagnosis.",
   },
 ];
+
+export const steps = [
+  {
+    id: 1,
+    title: "Browse Doctors/ Medical conditions",
+    description:
+      "Download and install the app from play store or app store. The app will guide you through the configuration process. Live support is available to help you.",
+    btnImage: "/assets/btnImage1.webp",
+  },
+  {
+    id: 2,
+    title: "Consultation Type",
+    description:
+      "Connect your device anywhere in your home and turn it on. Follow the app's configuration instructions. Make sure your home WiFi is working well. Consult with our telehealth urgent care or medical specialties by text, phone call or video call.",
+    btnImage: "/assets/btnImage2.avif",
+  },
+  {
+    id: 3,
+    title: "Make payment & confirm appointment",
+    description:
+      "Select your medical condition and make payment. Then you will be able to access our urgent care telehealth consultation from anywhere remotely or make an appointment with our medical specialist at your convenient time.",
+    btnImage: "/assets/btnImage3.jpg",
+  },
+];

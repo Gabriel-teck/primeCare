@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useTheme } from "@/context/ThemeContext";
 import { Moon, Sun, Menu, X } from "lucide-react";
@@ -13,7 +12,7 @@ export default function Header() {
 
   return (
     <>
-      <nav className="fixed top-0 z-50 flex w-full h-16 md:h-28 items-center justify-between bg-white dark:bg-accent  border-b shadow-sm px-4 md:px-6 ">
+      <nav className="fixed top-0 z-50 flex w-full h-12 md:h-20 items-center justify-between bg-white dark:bg-accent px-4 md:px-6 ">
         {/* logo */}
         <div className="flex text-shadow-lg">
           <Link href="/">
@@ -25,40 +24,40 @@ export default function Header() {
         </div>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-4 text-lg font-bold">
+        <div className="hidden lg:flex items-center gap-4 text-sm font-bold">
           <Link
             href="/"
-            className="text-gray-600 hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
+            className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
             Home
           </Link>
           <Link
             href="#2"
-            className="text-gray-600 hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
+            className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
             Care Service
           </Link>
           <Link
             href="#3"
-            className="text-gray-600 hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
+            className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
             Consultation
           </Link>
           <Link
             href="#4"
-            className="text-gray-600 hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
+            className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
             About us
           </Link>
           <Link
             href="#5"
-            className="text-gtext-green-600 transition-colors hover:bg-gray-100 rounded-md px-6 py-2"
+            className="text-black transition-colors hover:bg-gray-100 rounded-md px-6 py-2"
           >
             Contact us
           </Link>
           <Link
             href="/login"
-            className="text-gray-600 hover:text-green-600 transition-colors rounded-md shadow-sm  bg-gray-100 px-6 py-2"
+            className="text-black hover:text-green-600 transition-colors rounded-md shadow-sm  bg-gray-100 px-6 py-2"
           >
             Login
           </Link>
@@ -79,15 +78,15 @@ export default function Header() {
         </div>
 
         {/* Mobile Menu Button */}
-        <div className="md:hidden">
+        <div className="lg:hidden">
           <button
             onClick={() => setShowNavBar(!showNavBar)}
-            className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="p-2 rounded-md transition-colors cursor-pointer"
           >
             {showNavBar ? (
-              <X className="w-8 h-8" />
+              <X className="w-8 h-8 text-[#1d884a]" />
             ) : (
-              <Menu className="w-8 h-8" />
+              <Menu className="w-8 h-8 text-[#1d884a]" />
             )}
           </button>
         </div>
@@ -97,39 +96,44 @@ export default function Header() {
       {showNavBar && (
         <>
           <div
-            className={`fixed top-16 left-0 right-0 z-50 md:hidden
+            className={`fixed top-12 sm:top-12 md:top-18 left-0 right-0 z-50 lg:hidden
           h-[calc(100vh-4rem)] overflow-y-auto
           transition-transform duration-700 ease-in-out
           ${showNavBar ? "translate-x-0" : "translate-x-full"}`}
           >
             <div className="flex flex-col font-bold py-4 px-6 space-y-4 bg-white dark:bg-cyan-950 dark:text-white shadow-md items-center border-2">
               <Link
-                href="#1"
+                href="/"
                 className="text-lg py-2 hover:text-green-600 transition-colors"
+                onClick={() => setShowNavBar(false)}
               >
                 Home
               </Link>
               <Link
                 href="#2"
                 className="text-lg py-2 hover:text-green-600 transition-colors"
+                onClick={() => setShowNavBar(false)}
               >
                 Care Service
               </Link>
               <Link
                 href="#3"
                 className="text-lg py-2 hover:text-green-600 transition-colors"
+                onClick={() => setShowNavBar(false)}
               >
                 Consultation
               </Link>
               <Link
                 href="#4"
                 className="text-lg py-2 hover:text-green-600 transition-colors"
+                onClick={() => setShowNavBar(false)}
               >
                 About us
               </Link>
               <Link
                 href="#5"
                 className="text-lg py-2 hover:text-green-600 transition-colors"
+                onClick={() => setShowNavBar(false)}
               >
                 Contact us
               </Link>
@@ -137,12 +141,14 @@ export default function Header() {
                 <Link
                   href="/login"
                   className="text-lg py-2 px-8 text-green-600 hover:text-green-600 transition-colors rounded-md shadow-sm  bg-gray-100"
+                  onClick={() => setShowNavBar(false)}
                 >
                   Login
                 </Link>
                 <Link
                   href="/register"
                   className="text-lg py-2 px-8 bg-[#1d884a] hover:text-green-800 transition-colors rounded-md shadow-sm text-white hover:bg-[#95efbaf8]"
+                  onClick={() => setShowNavBar(false)}
                 >
                   Signup
                 </Link>
