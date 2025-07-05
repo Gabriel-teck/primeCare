@@ -1,48 +1,48 @@
 "use client";
 
 import {
-  Grid,
+  Users,
+  Settings,
+  BarChart2,
   Calendar,
   MessageSquare,
-  CreditCard,
-  Stethoscope,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-interface UserDashboardSidebarProps {
+interface AdminDashboardSidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
 }
 
-export default function UserDashoardSidebar({
+export default function AdminDashoardSidebar({
   isOpen,
   onClose,
-}: UserDashboardSidebarProps) {
+}: AdminDashboardSidebarProps) {
   const pathname = usePathname();
 
   const navItems = [
-    { href: "/patient-dashboard", icon: Grid, label: "Dashboard" },
+    { label: "Dashboard", icon: BarChart2, href: "/admin-dashboard" },
     {
-      href: "/patient-dashboard/consultation",
-      icon: Stethoscope,
-      label: "Consultation",
-    },
-    {
-      href: "/patient-dashboard/appointment",
+      label: "Appointments",
       icon: Calendar,
-      label: "Appointment",
+      href: "/admin-dashboard/admin-appointments",
     },
     {
-      href: "/patient-dashboard/messages",
+      label: "Messages & Chat",
       icon: MessageSquare,
-      label: "Instant Message",
+      href: "/admin-dashboard/admin-chats",
     },
     {
-      href: "/patient-dashboard/paymenthistory",
-      icon: CreditCard,
-      label: "Payment History",
+      label: "Patients",
+      icon: Users,
+      href: "/admin-dashboard/admin-patients",
+    },
+    {
+      label: "Settings",
+      icon: Settings,
+      href: "/admin-dashboard/admin-settings",
     },
   ];
 

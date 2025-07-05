@@ -24,7 +24,7 @@ export default function PatientLayout({
     <html lang="en">
       <body className={`${gabarito.variable} antialiased`}>
         <ThemeProvider>
-          <div className="flex h-screen bg-gray-50">
+          <div className="flex h-screen bg-gray-50 ">
             {/* Sidebar is now handled within the header component */}
             <div className="flex-1 flex flex-col">
               <UserDashoardHeader />

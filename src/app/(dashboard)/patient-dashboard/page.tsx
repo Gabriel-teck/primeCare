@@ -31,9 +31,7 @@ export default function PatientDashboard() {
     <div className="p-4 md:p-8 sm:mt-12 space-y-8">
       {/* Top stats card */}
       <div className="bg-white rounded-3xl shadow-sm p-4 md:p-8 space-y-6">
-        <h2 className="text-2xl md:text-3xl font-semibold mb-2">
-          Hi, {userName}
-        </h2>
+        <h2 className="text-[24px] text-[#212529] mb-2">Hi, {userName}</h2>
         <div className="flex flex-col md:flex-row gap-4">
           {stats.map((stat) => (
             <div
@@ -44,7 +42,7 @@ export default function PatientDashboard() {
                 <span className="text-white text-sm md:text-base font-medium mb-2">
                   {stat.label}
                 </span>
-                <span className="text-3xl md:text-4xl font-bold text-white">
+                <span className="text-[12px] font-bold text-white">
                   {stat.value}
                 </span>
               </div>
@@ -63,7 +61,7 @@ export default function PatientDashboard() {
       {/* Notification card */}
       <div className="bg-white rounded-3xl shadow-sm p-4 md:p-8 flex flex-col md:flex-row items-center md:items-start min-h-[220px] relative overflow-hidden">
         <div className="flex-1 z-10">
-          <h3 className="text-2xl font-semibold mb-4">Don't Forget</h3>
+          <h3 className="text-[24px] text-[#212529] mb-4">Don't Forget</h3>
           <p className="text-gray-600">No new notifications to note</p>
         </div>
         <div className="w-full md:w-1/3 flex justify-end mt-6 md:mt-0 z-0">
