@@ -2,13 +2,54 @@
 
 import Link from "next/link";
 import { useTheme } from "@/context/ThemeContext";
-import { Moon, Sun, Menu, X } from "lucide-react";
+import {
+  Moon,
+  Sun,
+  Menu,
+  X,
+  User,
+  LogOut,
+  LayoutDashboard,
+} from "lucide-react";
 import { Button } from "../ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
+  const router = useRouter();
   const [showNavBar, setShowNavBar] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    router.push("/");
+    setShowNavBar(false);
+  };
+
+  const handleDashboard = () => {
+    if (user?.role === "admin") {
+      router.push("/admin-dashboard");
+      setShowNavBar(false);
+    } else {
+      router.push("/patient-dashboard");
+      setShowNavBar(false);
+    }
+  };
+
+  const handleProfile = () => {
+    router.push("/profile");
+    setShowNavBar(false);
+  };
 
   return (
     <>
@@ -55,19 +96,65 @@ export default function Header() {
           >
             Contact us
           </Link>
-          <Link
-            href="/login"
-            className="text-black hover:text-green-600 transition-colors rounded-md shadow-sm  bg-gray-100 px-6 py-2"
-          >
-            Login
-          </Link>
-          <Link
-            href="/register"
-            className="hover:bg-gray-100 hover:text-green-700 transition-colors rounded-md shadow-sm text-white bg-[#1d884a] px-6 py-2"
-          >
-            Signup
-          </Link>
-          {/* Only authenticated user should have access */}
+
+          {/* Conditional rendering based on authentication */}
+          {user ? (
+            // Authenticated user - show dropdown
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span className="hidden md:inline">
+                    {user.fullName || user.email}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {user.fullName || "User"}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleDashboard}>
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  <span>Dashboard</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleProfile}>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            // Not authenticated - show login/signup buttons
+            <>
+              <Link
+                href="/login"
+                className="text-black hover:text-green-600 transition-colors rounded-md shadow-sm  bg-gray-100 px-6 py-2"
+              >
+                Login
+              </Link>
+              <Link
+                href="/register"
+                className="hover:bg-gray-100 hover:text-green-700 transition-colors rounded-md shadow-sm text-white bg-[#1d884a] px-6 py-2"
+              >
+                Signup
+              </Link>
+            </>
+          )}
+
+          {/* Theme toggle */}
           <Button variant="ghost" size="sm" onClick={() => toggleTheme()}>
             {theme === "light" ? (
               <Sun className="h-5 w-5" />
@@ -137,32 +224,67 @@ export default function Header() {
               >
                 Contact us
               </Link>
-              <div className="flex justify-evenly pt-4 border-t w-full items-center">
-                <Link
-                  href="/login"
-                  className="text-lg py-2 px-8 text-green-600 hover:text-green-600 transition-colors rounded-md shadow-sm  bg-gray-100"
-                  onClick={() => setShowNavBar(false)}
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/register"
-                  className="text-lg py-2 px-8 bg-[#1d884a] hover:text-green-800 transition-colors rounded-md shadow-sm text-white hover:bg-[#95efbaf8]"
-                  onClick={() => setShowNavBar(false)}
-                >
-                  Signup
-                </Link>
-                <button
-                  onClick={() => toggleTheme()}
-                  className="border bg-green-700  dark:bg-white px-4 py-2 rounded-sm shadow-sm"
-                >
-                  {theme === "light" ? (
-                    <Sun className=" text-white dark:text-black h-6 w-6" />
-                  ) : (
-                    <Moon className=" text-black h-6 w-6" />
-                  )}
-                </button>
-              </div>
+
+              {/* Mobile authentication buttons */}
+              {user ? (
+                // Authenticated user - show user menu
+                <div className="flex flex-col w-full space-y-2 pt-4 border-t">
+                  <div className="text-center mb-2">
+                    <p className="text-sm font-medium">
+                      {user.fullName || "User"}
+                    </p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
+                  </div>
+                  <button
+                    onClick={handleDashboard}
+                    className="text-lg py-2 px-8 text-green-600 hover:text-green-700 transition-colors rounded-md shadow-sm bg-gray-100"
+                  >
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={handleProfile}
+                    className="text-lg py-2 px-8 text-green-600 hover:text-green-700 transition-colors rounded-md shadow-sm bg-gray-100"
+                  >
+                    Profile
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="text-lg py-2 px-8 bg-red-600 hover:bg-red-700 transition-colors rounded-md shadow-sm text-white"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                // Not authenticated - show login/signup
+                <div className="flex justify-evenly pt-4 border-t w-full items-center">
+                  <Link
+                    href="/login"
+                    className="text-lg py-2 px-8 text-green-600 hover:text-green-600 transition-colors rounded-md shadow-sm  bg-gray-100"
+                    onClick={() => setShowNavBar(false)}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="text-lg py-2 px-8 bg-[#1d884a] hover:text-green-800 transition-colors rounded-md shadow-sm text-white hover:bg-[#95efbaf8]"
+                    onClick={() => setShowNavBar(false)}
+                  >
+                    Signup
+                  </Link>
+                </div>
+              )}
+
+              {/* Mobile theme toggle */}
+              <button
+                onClick={() => toggleTheme()}
+                className="border bg-green-700  dark:bg-white px-4 py-2 rounded-sm shadow-sm"
+              >
+                {theme === "light" ? (
+                  <Sun className=" text-white dark:text-black h-6 w-6" />
+                ) : (
+                  <Moon className=" text-black h-6 w-6" />
+                )}
+              </button>
             </div>
           </div>
         </>

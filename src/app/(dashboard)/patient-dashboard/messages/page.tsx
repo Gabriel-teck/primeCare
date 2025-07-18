@@ -1,9 +1,41 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import chat from "../../../../../public/assets/chat.webp";
 import { Button } from "@/components/ui/button";
+import ChatInterface from "@/components/custom/ChatInterFace";
+import PaymentModal from "@/components/modals/PaymentModal";
 
 export default function MessagesPage() {
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [hasPaid, setHasPaid] = useState(false);
+
+  const handlePaymentSuccess = () => {
+    setHasPaid(true);
+  };
+
+  if (hasPaid) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 sm:mt-18">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-green-700">
+                PrimeCare Chat
+              </h1>
+              <p className="text-gray-600">
+                Connect with healthcare professionals 24/7
+              </p>
+            </div>
+            <ChatInterface />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <section className="relative pt-10 lg:pt-32 bg-white h-screen">
@@ -34,6 +66,7 @@ export default function MessagesPage() {
                 variant="default"
                 size="xl"
                 className="bg-green-700 hover:bg-green-600"
+                onClick={() => setShowPaymentModal(true)}
               >
                 Pay to Continue
               </Button>
@@ -53,6 +86,12 @@ export default function MessagesPage() {
           </div>
         </div>
       </section>
+
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
     </>
   );
 }

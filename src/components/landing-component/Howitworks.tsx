@@ -2,10 +2,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { steps } from "@/data/simpledata";
-import qrcode from "../../../public/assets/qrcode.png";
-import stripe from "../../../public/assets/stripe.png";
-import apple from "../../../public/assets/apple.png";
-import google from "../../../public/assets/google.png";
+
 
 export default function Howitworks() {
   const [currentStep, setcurrentStep] = useState(steps[0]);

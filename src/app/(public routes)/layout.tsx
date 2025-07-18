@@ -5,6 +5,7 @@ import Providers from "../providers";
 import { ThemeProvider } from "@/context/ThemeContext";
 import Header from "@/components/landing-component/Header";
 import { Footer } from "@/components/landing-component/Footer";
+import { AuthProvider } from "@/context/AuthContext";
 
 const gabarito = Gabarito({
   subsets: ["latin"],
@@ -25,9 +26,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${gabarito.variable} antialiased`}>
         <ThemeProvider>
-          <Header />
-          <Providers>{children}</Providers>
-          <Footer />
+          <AuthProvider>
+                  <Header />
+                  <Providers>{children}</Providers>
+                  <Footer />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -1,7 +1,27 @@
 "use client";
 
-import React, { useState } from "react";
-import { Eye, Phone, Mail, ChevronDown, Plus } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  Eye,
+  Phone,
+  Mail,
+  ChevronDown,
+  Plus,
+  Calendar,
+  User,
+} from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { getAllPatients } from "@/lib/api/user";
+import { getAllAppointments } from "@/lib/api/appointment";
+import { getAllConsultations } from "@/lib/api/consultation";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const statusOptions = [
   { label: "All Patients", value: "all" },
@@ -10,73 +30,41 @@ const statusOptions = [
   { label: "New", value: "new" },
 ];
 
-const mockPatients = [
-  {
-    id: 1,
-    name: "Sarah Wilson",
-    initials: "SW",
-    email: "sarah@example.com",
-    phone: "(555) 123-4567",
-    age: 40,
-    gender: "Female",
-    lastVisit: "10/01/2024",
-    visits: 15,
-    status: "active",
-    plan: "premium",
-  },
-  {
-    id: 2,
-    name: "Robert Brown",
-    initials: "RB",
-    email: "robert@example.com",
-    phone: "(555) 987-6543",
-    age: 46,
-    gender: "Male",
-    lastVisit: "08/01/2024",
-    visits: 28,
-    status: "active",
-    plan: "family",
-  },
-  {
-    id: 3,
-    name: "Emily Davis",
-    initials: "ED",
-    email: "emily@example.com",
-    phone: "(555) 456-7890",
-    age: 32,
-    gender: "Female",
-    lastVisit: "05/01/2024",
-    visits: 8,
-    status: "active",
-    plan: "basic",
-  },
-  {
-    id: 4,
-    name: "John Doe",
-    initials: "JD",
-    email: "john@example.com",
-    phone: "(555) 111-2222",
-    age: 59,
-    gender: "Male",
-    lastVisit: "20/12/2023",
-    visits: 42,
-    status: "inactive",
-    plan: "basic",
-  },
-  {
-    id: 5,
-    name: "Mike Johnson",
-    initials: "MJ",
-    email: "mike@example.com",
-    phone: "(555) 333-4444",
-    age: 37,
-    gender: "Male",
-    lastVisit: "12/01/2024",
-    visits: 3,
-    status: "new",
-    plan: "basic",
-  },
-];
+type Patient = {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+  createdAt: string;
+};
+
+type Appointment = {
+  id: string;
+  patientId: string;
+  fullName: string;
+  email: string;
+  date: string;
+  status: string;
+  createdAt: string;
+};
+
+type Consultation = {
+  id: string;
+  patientId: string;
+  fullName: string;
+  email: string;
+  date: string;
+  status: string;
+  createdAt: string;
+};
+
+type PatientWithStats = Patient & {
+  initials: string;
+  lastVisit: string;
+  totalVisits: number;
+  status: "active" | "inactive" | "new";
+  plan: "premium" | "family" | "basic";
+};
 
 const statusBadge = {
   active: {
@@ -108,35 +96,178 @@ const planBadge = {
   },
 };
 
-const summary = [
-  { label: "Total Patients", value: 5 },
-  { label: "Active Patients", value: 3 },
-  { label: "Inactive Patients", value: 1 },
-  { label: "New Patients", value: 1 },
-];
+const ITEMS_PER_PAGE = 10;
 
 export default function AdminPatientsPage() {
+  const { token } = useAuth();
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [showStatus, setShowStatus] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [patientsData, appointmentsData, consultationsData] =
+          await Promise.all([
+            getAllPatients(token),
+            getAllAppointments(token),
+            getAllConsultations(token),
+          ]);
+        setPatients(patientsData || []);
+        setAppointments(appointmentsData || []);
+        setConsultations(consultationsData || []);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [token]);
+
+  // Process patients with statistics
+  const patientsWithStats: PatientWithStats[] = patients.map((patient) => {
+    // Get patient's appointments and consultations
+    const patientAppointments = appointments.filter(
+      (apt) => apt.email === patient.email
+    );
+    const patientConsultations = consultations.filter(
+      (cons) => cons.email === patient.email
+    );
+
+    // Calculate last visit
+    const allVisits = [
+      ...patientAppointments.map((apt) => ({
+        date: apt.date,
+        type: "appointment",
+      })),
+      ...patientConsultations.map((cons) => ({
+        date: cons.date,
+        type: "consultation",
+      })),
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const lastVisit = allVisits.length > 0 ? allVisits[0].date : null;
+    const totalVisits =
+      patientAppointments.length + patientConsultations.length;
+
+    // Determine patient status
+    let status: "active" | "inactive" | "new" = "new";
+    if (totalVisits > 0) {
+      const lastVisitDate = lastVisit ? new Date(lastVisit) : null;
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      if (lastVisitDate && lastVisitDate > thirtyDaysAgo) {
+        status = "active";
+      } else {
+        status = "inactive";
+      }
+    }
+
+    // Determine plan based on visit frequency
+    let plan: "premium" | "family" | "basic" = "basic";
+    if (totalVisits > 20) {
+      plan = "premium";
+    } else if (totalVisits > 10) {
+      plan = "family";
+    }
+
+    // Generate initials
+    const initials = patient.fullName
+      .split(" ")
+      .map((name) => name.charAt(0))
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+
+    return {
+      ...patient,
+      initials,
+      lastVisit: lastVisit
+        ? new Date(lastVisit).toLocaleDateString()
+        : "No visits",
+      totalVisits,
+      status,
+      plan,
+    };
+  });
 
   // Filter patients by search and status
-  const filteredPatients = mockPatients.filter((p) => {
+  const filteredPatients = patientsWithStats.filter((p) => {
     const q = search.toLowerCase();
     const matchesSearch =
-      p.name.toLowerCase().includes(q) ||
+      p.fullName.toLowerCase().includes(q) ||
       p.email.toLowerCase().includes(q) ||
-      p.phone.toLowerCase().includes(q) ||
-      p.age.toString().includes(q) ||
-      p.gender.toLowerCase().includes(q) ||
-      p.id.toString().includes(q);
+      p.id.toLowerCase().includes(q);
     const matchesStatus = status === "all" ? true : p.status === status;
     return matchesSearch && matchesStatus;
   });
 
+  // Pagination
+  const totalPages = Math.ceil(filteredPatients.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentPatients = filteredPatients.slice(startIndex, endIndex);
+
+  // Calculate summary statistics
+  const summary = [
+    { label: "Total Patients", value: patientsWithStats.length },
+    {
+      label: "Active Patients",
+      value: patientsWithStats.filter((p) => p.status === "active").length,
+    },
+    {
+      label: "Inactive Patients",
+      value: patientsWithStats.filter((p) => p.status === "inactive").length,
+    },
+    {
+      label: "New Patients",
+      value: patientsWithStats.filter((p) => p.status === "new").length,
+    },
+  ];
+
   const handleAddPatient = () => {
     alert("Add New Patient functionality coming soon!");
   };
+
+  const handleViewPatient = (patientId: string) => {
+    alert(`View patient ${patientId} functionality coming soon!`);
+  };
+
+  const handleCallPatient = (email: string) => {
+    alert(`Call patient at ${email} functionality coming soon!`);
+  };
+
+  const handleEmailPatient = (email: string) => {
+    window.open(`mailto:${email}`, "_blank");
+  };
+
+  // Reset to first page when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, status]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col p-4 md:p-8">
+        <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col gap-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col p-4 md:p-8">
@@ -160,6 +291,7 @@ export default function AdminPatientsPage() {
             </button>
           </div>
         </div>
+
         {/* Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-2">
           {summary.map((item, idx) => (
@@ -176,13 +308,14 @@ export default function AdminPatientsPage() {
             </div>
           ))}
         </div>
+
         {/* Search and Filter */}
         <div className="bg-white rounded-xl border shadow-sm p-4 flex flex-col gap-3">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
             <div className="flex-1 flex items-center gap-2">
               <input
                 type="text"
-                placeholder="Search patients by name, email, phone, or ID..."
+                placeholder="Search patients by name, email, or ID..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full px-3 py-2 rounded-md border text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
@@ -219,6 +352,21 @@ export default function AdminPatientsPage() {
               )}
             </div>
           </div>
+
+          {/* Results Info */}
+          <div className="flex items-center justify-between text-sm text-gray-500">
+            <span>
+              Showing {startIndex + 1}-
+              {Math.min(endIndex, filteredPatients.length)} of{" "}
+              {filteredPatients.length} patients
+            </span>
+            {filteredPatients.length > ITEMS_PER_PAGE && (
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
+            )}
+          </div>
+
           {/* Table */}
           <div className="overflow-x-auto mt-2">
             <table className="min-w-full text-sm">
@@ -227,9 +375,6 @@ export default function AdminPatientsPage() {
                   <th className="py-2 px-3 text-left font-semibold">Patient</th>
                   <th className="py-2 px-3 text-left font-semibold">Contact</th>
                   <th className="py-2 px-3 text-left font-semibold">
-                    Age/Gender
-                  </th>
-                  <th className="py-2 px-3 text-left font-semibold">
                     Last Visit
                   </th>
                   <th className="py-2 px-3 text-left font-semibold">Status</th>
@@ -237,14 +382,16 @@ export default function AdminPatientsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredPatients.length === 0 ? (
+                {currentPatients.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-gray-400">
-                      No patients found.
+                    <td colSpan={5} className="text-center py-8 text-gray-400">
+                      {filteredPatients.length === 0
+                        ? "No patients found."
+                        : "No patients on this page."}
                     </td>
                   </tr>
                 ) : (
-                  filteredPatients.map((p) => (
+                  currentPatients.map((p) => (
                     <tr key={p.id} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-3">
@@ -253,7 +400,7 @@ export default function AdminPatientsPage() {
                           </div>
                           <div>
                             <div className="font-semibold text-gray-900">
-                              {p.name}
+                              {p.fullName}
                             </div>
                             <div className="text-xs text-gray-500">
                               ID: {p.id}
@@ -265,58 +412,54 @@ export default function AdminPatientsPage() {
                         <div className="font-medium text-gray-900">
                           {p.email}
                         </div>
-                        <div className="text-xs text-gray-500">{p.phone}</div>
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="font-semibold text-gray-900">
-                          {p.age} years
+                        <div className="text-xs text-gray-500">
+                          Member since{" "}
+                          {new Date(p.createdAt).toLocaleDateString()}
                         </div>
-                        <div className="text-xs text-gray-500">{p.gender}</div>
                       </td>
                       <td className="py-3 px-3">
                         <div className="font-semibold text-gray-900">
                           {p.lastVisit}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {p.visits} visits total
+                          {p.totalVisits} visits total
                         </div>
                       </td>
                       <td className="py-3 px-3">
                         <div className="flex gap-2 flex-wrap">
                           <span
                             className={`inline-flex items-center px-3 py-1 rounded-full border text-xs font-semibold ${
-                              statusBadge[p.status as keyof typeof statusBadge]
-                                ?.color
+                              statusBadge[p.status]?.color
                             }`}
                           >
-                            {
-                              statusBadge[p.status as keyof typeof statusBadge]
-                                ?.label
-                            }
+                            {statusBadge[p.status]?.label}
                           </span>
                           <span
                             className={`inline-flex items-center px-3 py-1 rounded-full border text-xs font-semibold ${
-                              planBadge[p.plan as keyof typeof planBadge]?.color
+                              planBadge[p.plan]?.color
                             }`}
                           >
-                            {planBadge[p.plan as keyof typeof planBadge]?.label}
+                            {planBadge[p.plan]?.label}
                           </span>
                         </div>
                       </td>
                       <td className="py-3 px-3 flex items-center gap-2">
                         <button
+                          onClick={() => handleViewPatient(p.id)}
                           className="p-2 rounded hover:bg-gray-100"
                           title="View"
                         >
                           <Eye className="w-5 h-5 text-gray-500" />
                         </button>
                         <button
+                          onClick={() => handleCallPatient(p.email)}
                           className="p-2 rounded hover:bg-green-100"
                           title="Phone"
                         >
                           <Phone className="w-5 h-5 text-green-600" />
                         </button>
                         <button
+                          onClick={() => handleEmailPatient(p.email)}
                           className="p-2 rounded hover:bg-blue-100"
                           title="Mail"
                         >
@@ -329,6 +472,59 @@ export default function AdminPatientsPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-6">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() =>
+                        setCurrentPage(Math.max(1, currentPage - 1))
+                      }
+                      className={
+                        currentPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+
+                  {/* Page Numbers */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          className={`cursor-pointer ${
+                            currentPage === page
+                              ? "bg-green-600 text-white hover:bg-green-700"
+                              : "hover:bg-green-50"
+                          }`}
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() =>
+                        setCurrentPage(Math.min(totalPages, currentPage + 1))
+                      }
+                      className={
+                        currentPage === totalPages
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </div>
       </div>
     </div>

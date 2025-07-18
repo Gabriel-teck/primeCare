@@ -1,0 +1,296 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import {
+  Send,
+  Phone,
+  Paperclip,
+  Image as ImageIcon,
+  File,
+  X,
+  Video,
+  Mic,
+} from "lucide-react";
+import { Message } from "@/types/chat";
+import { useAuth } from "@/context/AuthContext";
+import { useChat } from "@/context/ChatContext";
+
+export default function ChatInterface() {
+  const {
+    messages,
+    conversations,
+    currentConversation,
+    isConnected,
+    isLoading,
+    sendMessage,
+    loadConversations,
+    loadMessages,
+    setCurrentConversation,
+  } = useChat();
+
+  const { user } = useAuth();
+  const [inputText, setInputText] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleSendMessage = () => {
+    if (!inputText.trim() && !selectedFile) return;
+
+    sendMessage(inputText);
+    setInputText("");
+    setSelectedFile(null);
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const removeSelectedFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleConversationSelect = (conversation: any) => {
+    setCurrentConversation(conversation);
+    loadMessages(conversation.id);
+  };
+
+  const handleCall = () => {
+    alert("Initiating call with doctor...");
+  };
+
+  const handleVideoCall = () => {
+    alert("Initiating video call with doctor...");
+  };
+
+  const handleVoiceMessage = () => {
+    alert("Voice message feature coming soon...");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-green-700">
+            Loading conversations...
+          </h3>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-96 bg-white border border-gray-200 rounded-lg shadow-lg">
+      {/* Conversations Sidebar */}
+      <div className="w-80 border-r border-gray-200 bg-gray-50">
+        <div className="p-4 border-b border-gray-200">
+          <h3 className="font-semibold text-gray-800">Conversations</h3>
+        </div>
+        <div className="overflow-y-auto h-full">
+          {conversations.map((conversation) => (
+            <div
+              key={conversation.id}
+              onClick={() => handleConversationSelect(conversation)}
+              className={`p-4 border-b border-gray-200 cursor-pointer hover:bg-gray-100 ${
+                currentConversation?.id === conversation.id ? "bg-green-50" : ""
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-700 rounded-full flex items-center justify-center">
+                  <span className="text-white font-semibold">Dr</span>
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-800">
+                    Dr. Gabriel Udoh
+                  </h4>
+                  <p className="text-sm text-gray-500">
+                    {conversation.messages?.length > 0
+                      ? conversation.messages[
+                          conversation.messages.length - 1
+                        ].content.substring(0, 30) + "..."
+                      : "No messages yet"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Chat Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-green-50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-700 rounded-full flex items-center justify-center">
+              <span className="text-white font-semibold">Dr</span>
+            </div>
+            <div>
+              <h3 className="font-semibold text-green-700">Dr. Gabriel Udoh</h3>
+              <p className="text-sm text-green-600">
+                {isConnected ? "Online" : "Connecting..."}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleCall}
+              variant="outline"
+              size="sm"
+              className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
+            >
+              <Phone className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={handleVideoCall}
+              variant="outline"
+              size="sm"
+              className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
+            >
+              <Video className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${
+                message.sender === "user" ? "justify-end" : "justify-start"
+              }`}
+            >
+              <div
+                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                  message.sender === "user"
+                    ? "bg-green-700 text-white"
+                    : "bg-gray-100 text-gray-800"
+                }`}
+              >
+                {message.type === "text" && <p>{message.text}</p>}
+                {message.type === "image" && (
+                  <div>
+                    <img
+                      src={message.fileUrl}
+                      alt="Shared image"
+                      className="max-w-full h-auto rounded"
+                    />
+                    <p className="text-xs mt-1 opacity-75">
+                      {message.fileName}
+                    </p>
+                  </div>
+                )}
+                {message.type === "file" && (
+                  <div className="flex items-center gap-2">
+                    <File className="h-4 w-4" />
+                    <span>{message.fileName}</span>
+                  </div>
+                )}
+                <p className="text-xs opacity-75 mt-1">
+                  {message.timestamp.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+            </div>
+          ))}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* File Preview */}
+        {selectedFile && (
+          <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {selectedFile.type.startsWith("image/") ? (
+                  <ImageIcon className="h-4 w-4 text-green-700" />
+                ) : (
+                  <File className="h-4 w-4 text-green-700" />
+                )}
+                <span className="text-sm text-gray-700">
+                  {selectedFile.name}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={removeSelectedFile}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Input Area */}
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleVoiceMessage}
+              className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
+            >
+              <Mic className="h-4 w-4" />
+            </Button>
+            <Input
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Type your message..."
+              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={!inputText.trim() && !selectedFile}
+              className="bg-green-700 hover:bg-green-600"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
