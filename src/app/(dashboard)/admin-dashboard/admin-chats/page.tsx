@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MessageSquare, ArrowLeft, Send, Phone, Mail } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useChat } from "@/context/ChatContext";
+import { useSocket } from "@/context/SocketContext";
 import { getAllPatients } from "@/lib/api/user";
 
 type Patient = {
@@ -30,6 +30,7 @@ type Message = {
   sender: "patient" | "admin";
   senderId: string;
   createdAt: string;
+  read?: boolean;
 };
 
 type ConversationWithPatient = Conversation & {
@@ -41,7 +42,7 @@ type ConversationWithPatient = Conversation & {
 
 export default function AdminChatsPage() {
   const { token, user } = useAuth();
-  const { socket, isConnected } = useChat();
+  const { socket, isConnected } = useSocket();
   const [conversations, setConversations] = useState<ConversationWithPatient[]>(
     []
   );
@@ -74,9 +75,16 @@ export default function AdminChatsPage() {
           }
         );
 
+        console.log(
+          "Conversations response status:",
+          conversationsResponse.status
+        );
+
         if (!conversationsResponse.ok) {
+          const errorText = await conversationsResponse.text();
+          console.error("Conversations response error:", errorText);
           throw new Error(
-            `Failed to fetch conversations: ${conversationsResponse.status}`
+            `Failed to fetch conversations: ${conversationsResponse.status} - ${errorText}`
           );
         }
 
@@ -116,7 +124,7 @@ export default function AdminChatsPage() {
             const initials =
               patient?.fullName
                 ?.split(" ")
-                .map((name) => name.charAt(0))
+                .map((name: string) => name.charAt(0))
                 .join("")
                 .toUpperCase()
                 .slice(0, 2) || "NA";

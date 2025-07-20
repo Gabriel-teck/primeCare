@@ -25,7 +25,14 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const { token, user } = useAuth();
 
   const connect = () => {
-    if (!token || !user) return;
+    if (!token || !user) {
+      console.log("Socket: No token or user, skipping connection");
+      return;
+    }
+
+    console.log("Socket: Attempting to connect...");
+    console.log("Socket: Token exists:", !!token);
+    console.log("Socket: User exists:", !!user);
 
     const newSocket = io("http://localhost:3001/chat", {
       auth: {
@@ -35,17 +42,17 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     });
 
     newSocket.on("connect", () => {
-      console.log("Connected to chat server");
+      console.log("✅ Connected to chat server");
       setIsConnected(true);
     });
 
     newSocket.on("disconnect", () => {
-      console.log("Disconnected from chat server");
+      console.log("❌ Disconnected from chat server");
       setIsConnected(false);
     });
 
     newSocket.on("connect_error", (error) => {
-      console.error("Connection error:", error);
+      console.error("❌ Socket connection error:", error);
       setIsConnected(false);
     });
 
@@ -54,6 +61,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   const disconnect = () => {
     if (socket) {
+      console.log("Socket: Disconnecting...");
       socket.disconnect();
       setSocket(null);
       setIsConnected(false);
@@ -61,6 +69,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    console.log("Socket: useEffect triggered", {
+      token: !!token,
+      user: !!user,
+    });
     if (token && user) {
       connect();
     } else {
