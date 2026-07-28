@@ -103,7 +103,10 @@ export default function Home() {
         </section>
 
         {/* Consultation section */}
-        <section className="mt-[18px]">
+        <section
+          id="consultation"
+          className="mt-[18px] scroll-mt-24 md:scroll-mt-28"
+        >
           <div className="container mx-auto flex flex-col gap-6 md:flex-row px-4 sm:px-6 lg:px-8 md:items-start justify-center">
             <div className="order-2 md:order-1">
               <Image src={consult} alt="consult svg" />
@@ -129,7 +132,10 @@ export default function Home() {
         </section>
 
         {/* Urgent care */}
-        <section className="w-full mt-[60px] px-[20px]">
+        <section
+          id="care-service"
+          className="w-full mt-[60px] px-[20px] scroll-mt-24 md:scroll-mt-28"
+        >
           <div className="container mx-auto flex flex-col md:flex-row md:justify-between p-[30px] md:p-[35px] sm:px-6 lg:px-8 bg-[linear-gradient(135deg,_#1d884a,_#9fd6b6)] rounded-[20px]">
             <div className="max-w-xl flex flex-col items-center md:items-start text-white">
               <h3 className="tracking-normal text-[36px] font-bold mb-[30px]">
@@ -188,9 +194,9 @@ export default function Home() {
         </section>
 
         {/* Medical Specialists */}
-        <section className="w-[100%] mt-[10rem]">
+        <section className="mt-[10rem] w-full overflow-hidden">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col mx-auto md:w-[80%] items-center">
+            <div className="mx-auto flex flex-col items-center md:w-[80%]">
               <h1 className="text-[rgb(51, 51, 51)] text-[32px] font-semibold tracking-normal">
                 Medical specialties
               </h1>
@@ -202,16 +208,18 @@ export default function Home() {
                 that work best for you.
               </p>
             </div>
+          </div>
 
-            {/* List of bookings */}
-            <div>
-              <Carousel />
-            </div>
+          <div className="mt-8 w-full">
+            <Carousel />
           </div>
         </section>
 
         {/* How it works */}
-        <section className="mt-[2rem] bg-[#F6FAFD]">
+        <section
+          id="how-it-works"
+          className="mt-[2rem] bg-[#F6FAFD] scroll-mt-24 md:scroll-mt-28"
+        >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col mx-auto md:w-[80%] items-center">
               <h1 className="pt-[90px] text-[rgb(51, 51, 51)] text-[32px] font-semibold tracking-normal">

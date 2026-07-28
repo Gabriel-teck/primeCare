@@ -1,8 +1,10 @@
-// components/TestimonialsCarousel.tsx
 "use client";
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 import TestimonialCard from "@/components/landing-component/TestimonialCard";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+
+const AUTO_ADVANCE_MS = 4500;
 
 const testimonials = [
   {
@@ -37,29 +39,51 @@ const testimonials = [
 
 const TestimonialsCarousel = () => {
   const [index, setIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    if (isPaused) return;
+
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % testimonials.length);
+    }, AUTO_ADVANCE_MS);
+
+    return () => clearInterval(timer);
+  }, [isPaused]);
 
   const handlePrev = () => {
     setIndex((prev) => (prev === 0 ? testimonials.length - 1 : prev - 1));
   };
 
   const handleNext = () => {
-    setIndex((prev) => (prev === testimonials.length - 1 ? 0 : prev + 1));
+    setIndex((prev) => (prev + 1) % testimonials.length);
   };
 
   return (
-    <div className="relative flex flex-col items-start">
-      <TestimonialCard testimonial={testimonials[index]} />
+    <div
+      className="relative flex w-full flex-col items-start"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      <div
+        key={testimonials[index].name}
+        className="w-full animate-howitworks-fade"
+      >
+        <TestimonialCard testimonial={testimonials[index]} />
+      </div>
 
       <div className="flex gap-2 py-4">
         <button
           onClick={handlePrev}
-          className="w-10 h-10 rounded-full bg-green-700 text-white flex items-center justify-center shadow-md cursor-pointer"
+          className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-green-700 text-white shadow-md"
+          aria-label="Previous testimonial"
         >
           <ChevronLeft size={20} />
         </button>
         <button
           onClick={handleNext}
-          className="w-10 h-10 rounded-full bg-green-700 text-white flex items-center justify-center shadow-md cursor-pointer"
+          className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-green-700 text-white shadow-md"
+          aria-label="Next testimonial"
         >
           <ChevronRight size={20} />
         </button>
