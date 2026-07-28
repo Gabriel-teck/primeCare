@@ -14,53 +14,94 @@ export type AuthUser = {
 type AuthContextType = {
   user: AuthUser | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  ready: boolean;
+  login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+export const PREVIEW_TOKEN = "preview-admin-token";
+export const PREVIEW_ADMIN: AuthUser = {
+  id: "preview-admin",
+  email: "admin@primecare.health",
+  fullName: "PrimeCare Admin",
+  role: "super_admin",
+};
+
+const PREVIEW_ENABLED = process.env.NEXT_PUBLIC_ADMIN_PREVIEW === "true";
+
+function isAdminRole(role?: string) {
+  return role === "admin" || role === "super_admin";
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(
+    PREVIEW_ENABLED ? PREVIEW_ADMIN : null,
+  );
+  const [token, setToken] = useState<string | null>(
+    PREVIEW_ENABLED ? PREVIEW_TOKEN : null,
+  );
+  const [ready, setReady] = useState(PREVIEW_ENABLED);
 
   useEffect(() => {
     const stored = localStorage.getItem("token");
-    if (stored) {
-      setToken(stored);
-      userApi
-        .getUser(stored)
-        .then(setUser)
-        .catch(() => setUser(null));
+
+    if (!stored || stored === PREVIEW_TOKEN) {
+      if (PREVIEW_ENABLED) {
+        setToken(PREVIEW_TOKEN);
+        setUser(PREVIEW_ADMIN);
+      }
+      setReady(true);
+      return;
     }
+
+    userApi
+      .getUser(stored)
+      .then((nextUser) => {
+        if (PREVIEW_ENABLED && !isAdminRole(nextUser.role)) {
+          // Keep preview admin so the dashboard stays accessible for UI review.
+          setToken(PREVIEW_TOKEN);
+          setUser(PREVIEW_ADMIN);
+          return;
+        }
+        setToken(stored);
+        setUser(nextUser);
+      })
+      .catch(() => {
+        if (PREVIEW_ENABLED) {
+          setToken(PREVIEW_TOKEN);
+          setUser(PREVIEW_ADMIN);
+        } else {
+          setToken(null);
+          setUser(null);
+        }
+      })
+      .finally(() => setReady(true));
   }, []);
 
   const login = async (email: string, password: string) => {
-    try {
-      const data = await authApi.login(email, password);
-      console.log("AuthContext: Login response:", data);
-
-      setToken(data.access_token);
-      localStorage.setItem("token", data.access_token);
-
-      // Fetch user data using the token
-      const user = await userApi.getUser(data.access_token);
-      console.log("AuthContext: User data from /users/me:", user);
-      setUser(user);
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
-    }
+    const data = await authApi.login(email, password);
+    setToken(data.access_token);
+    localStorage.setItem("token", data.access_token);
+    const nextUser = await userApi.getUser(data.access_token);
+    setUser(nextUser);
+    return nextUser;
   };
 
   const logout = () => {
+    localStorage.removeItem("token");
+    if (PREVIEW_ENABLED) {
+      setToken(PREVIEW_TOKEN);
+      setUser(PREVIEW_ADMIN);
+      return;
+    }
     setToken(null);
     setUser(null);
-    localStorage.removeItem("token");
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, ready, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

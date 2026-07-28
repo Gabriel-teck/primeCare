@@ -3,6 +3,7 @@ import { Gabarito } from "next/font/google";
 import "../globals.css";
 import Header from "@/components/landing-component/Header";
 import { AuthProvider } from "@/context/AuthContext";
+import { NavigationProgress } from "@/components/NavigationProgress";
 
 const gabarito = Gabarito({
   subsets: ["latin"],
@@ -23,6 +24,7 @@ export default function AuthLayout({
     <html lang="en">
       <body className={`${gabarito.variable} antialiased`}>
         <AuthProvider>
+          <NavigationProgress />
           <Header />
           {children}
         </AuthProvider>
