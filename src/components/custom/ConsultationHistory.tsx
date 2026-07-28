@@ -15,7 +15,10 @@ import {
   XCircle,
   RefreshCcw,
   Download,
+  ExternalLink,
+  Copy,
 } from "lucide-react";
+import { toast } from "sonner";
 
 type Consultation = {
   id: string;
@@ -27,6 +30,7 @@ type Consultation = {
   time: string;
   reason: string;
   status: string;
+  googleMeetLink?: string;
   fileUrl?: string;
   fileName?: string;
   rescheduleInfo?: { date: string; time: string };
@@ -128,14 +132,17 @@ export default function ConsultationHistory() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 overflow-x-auto">
-      <h2 className="text-lg font-bold mb-4">Consultation History</h2>
+    <div className="overflow-x-auto rounded-lg bg-white p-4 shadow">
+      <h2 className="mb-2 text-lg font-bold">Online Consultation History</h2>
+      <p className="mb-4 text-sm text-gray-500">
+        Video visits only. For clinic visits, use Appointments.
+      </p>
       {error && (
-        <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
+        <div className="mb-4 rounded border border-red-400 bg-red-100 p-2 text-red-700">
           {error}
         </div>
       )}
-      <table className="min-w-full text-sm">
+      <table className="min-w-[720px] w-full text-sm">
         <thead>
           <tr className="bg-gray-100">
             <th className="p-2 text-left">Date</th>
@@ -144,20 +151,21 @@ export default function ConsultationHistory() {
             <th className="p-2 text-left">Status</th>
             <th className="p-2 text-left">Reason</th>
             <th className="p-2 text-left">File</th>
+            <th className="p-2 text-left">Video</th>
             <th className="p-2 text-left">Actions</th>
           </tr>
         </thead>
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan={7} className="text-center py-6 text-gray-500">
+              <td colSpan={8} className="py-6 text-center text-gray-500">
                 Loading...
               </td>
             </tr>
           ) : consultations.length === 0 ? (
             <tr>
-              <td colSpan={7} className="text-center py-6 text-gray-500">
-                No consultations found.
+              <td colSpan={8} className="py-6 text-center text-gray-500">
+                No online consultations yet. Book a video visit to get started.
               </td>
             </tr>
           ) : (
@@ -178,8 +186,13 @@ export default function ConsultationHistory() {
                 <td className="p-2">{c.consultationType}</td>
                 <td className="p-2">
                   <StatusBadge status={c.status} />
+                  {c.status === "confirmed" && c.googleMeetLink ? (
+                    <span className="mt-1 block text-[11px] text-green-700">
+                      Meet ready
+                    </span>
+                  ) : null}
                 </td>
-                <td className="p-2">{c.reason}</td>
+                <td className="max-w-[160px] truncate p-2">{c.reason}</td>
                 <td className="p-2">
                   {c.fileUrl ? (
                     <a
@@ -195,13 +208,56 @@ export default function ConsultationHistory() {
                     <span className="text-gray-400">No file</span>
                   )}
                 </td>
-                <td className="p-2 flex gap-2">
+                <td className="p-2">
+                  {c.googleMeetLink ? (
+                    <div className="flex flex-wrap gap-1">
+                      <Button
+                        asChild
+                        size="sm"
+                        className="h-7 bg-green-700 px-2 text-xs hover:bg-green-600"
+                      >
+                        <a
+                          href={c.googleMeetLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="mr-1 h-3 w-3" />
+                          Join
+                        </a>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(
+                              c.googleMeetLink!,
+                            );
+                            toast.success("Meet link copied");
+                          } catch {
+                            toast.error("Could not copy link");
+                          }
+                        }}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400">
+                      {c.status === "pending"
+                        ? "After confirmation"
+                        : "Not set"}
+                    </span>
+                  )}
+                </td>
+                <td className="flex flex-wrap gap-2 p-2">
                   {(c.status === "pending" || c.status === "rescheduled") && (
                     <>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-red-600 border-red-200"
+                        className="border-red-200 text-red-600"
                         disabled={actionLoading === c.id}
                         onClick={() => handleCancel(c.id)}
                       >
@@ -210,7 +266,7 @@ export default function ConsultationHistory() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-blue-600 border-blue-200"
+                        className="border-blue-200 text-blue-600"
                         onClick={() => setRescheduleId(c.id)}
                         disabled={actionLoading === c.id}
                       >
@@ -220,7 +276,7 @@ export default function ConsultationHistory() {
                   )}
                   {rescheduleId === c.id && (
                     <form
-                      className="flex flex-col sm:flex-row gap-2 mt-2"
+                      className="mt-2 flex flex-col gap-2 sm:flex-row"
                       onSubmit={(e) => {
                         e.preventDefault();
                         handleReschedule(c.id);
@@ -229,7 +285,7 @@ export default function ConsultationHistory() {
                       <input
                         type="date"
                         required
-                        className="border rounded px-2 py-1"
+                        className="rounded border px-2 py-1"
                         value={rescheduleForm.date}
                         onChange={(e) =>
                           setRescheduleForm((f) => ({
@@ -241,7 +297,7 @@ export default function ConsultationHistory() {
                       <input
                         type="time"
                         required
-                        className="border rounded px-2 py-1"
+                        className="rounded border px-2 py-1"
                         value={rescheduleForm.time}
                         onChange={(e) =>
                           setRescheduleForm((f) => ({
@@ -268,6 +324,14 @@ export default function ConsultationHistory() {
                       </Button>
                     </form>
                   )}
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs"
+                  >
+                    <a href="/patient-dashboard/messages">Message</a>
+                  </Button>
                 </td>
               </tr>
             ))

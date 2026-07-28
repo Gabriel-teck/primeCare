@@ -1,105 +1,121 @@
 "use client";
 
-import UserDashoardSidebar from "./UserDashboardSidebar";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Bell, Menu, X } from "lucide-react";
-import { Button } from "../ui/button";
 import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { LogOut, Menu, X, HeartPulse } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/context/AuthContext";
+import { getPatientPageTitle } from "@/components/patient/nav";
+import UserDashoardSidebar from "./UserDashboardSidebar";
 
 export default function UserDashoardHeader() {
   const [showSidebar, setShowSidebar] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  const pageTitle = getPatientPageTitle(pathname);
+  const initials =
+    user?.fullName
+      ?.split(" ")
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "PT";
 
-  // Mapping of paths to page names
-  const getPageName = (path: string) => {
-    const pageMap: { [key: string]: string } = {
-      "/patient-dashboard": "Dashboard",
-      "/patient-dashboard/consultation": "Consultation",
-      "/patient-dashboard/appointment": "Appointment",
-      "/patient-dashboard/messages": "Messages",
-      "/patient-dashboard/paymenthistory": "Payment History",
-    };
-
-    return pageMap[path] || "Dashboard";
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
   };
-
-  const currentPageName = getPageName(pathname);
 
   return (
     <>
-      <header className="mx-auto fixed top-0 z-50 w-full lg:w-[calc(100%-15rem)] flex items-center justify-between bg-white border-b border-gray-200 px-4 sm:px-12 py-3 lg:ml-60">
-        <div className="lg:hidden">
+      <header className="fixed top-0 z-50 mx-auto flex w-full max-w-full items-center justify-between gap-2 border-b border-gray-200 bg-white px-3 py-3 sm:px-8 lg:ml-60 lg:w-[calc(100%-15rem)]">
+        <div className="shrink-0 lg:hidden">
           <button
-            onClick={() => setShowSidebar(!showSidebar)}
-            className="p-2 rounded-md transition-colors cursor-pointer hover:bg-gray-100"
+            onClick={() => setShowSidebar((v) => !v)}
+            className="cursor-pointer rounded-md p-2 hover:bg-gray-100"
+            aria-label="Toggle menu"
           >
             {showSidebar ? (
-              <X className="w-6 h-6 text-[#1d884a]" />
+              <X className="h-6 w-6 text-[#1d884a]" />
             ) : (
-              <Menu className="w-6 h-6 text-[#1d884a]" />
+              <Menu className="h-6 w-6 text-[#1d884a]" />
             )}
           </button>
         </div>
 
-        {/* Desktop logo and page name - hidden on mobile */}
-        <div className="hidden lg:flex items-center gap-6">
-          <div className="text-[20px] font-semibold text-[#212529]">
-            {currentPageName}
-          </div>
+        <div className="hidden min-w-0 text-[20px] font-semibold text-[#212529] lg:block">
+          {pageTitle}
         </div>
 
-        {/* Mobile page name - visible only on mobile */}
-        <div className="lg:hidden flex-1 text-center">
-          <h1 className="text-lg font-semibold text-[#14d">
-            {currentPageName}
+        <div className="min-w-0 flex-1 truncate text-center lg:hidden">
+          <h1 className="truncate text-base font-semibold text-[#1d884a] sm:text-lg">
+            {pageTitle}
           </h1>
         </div>
 
-        {/* Right side header content */}
-        <div className="hidden md:flex gap-4">
-          <Button
-            size="lg"
-            variant="default"
-            className="bg-green-700 hover:bg-green-600"
-          >
-            Urgent care
-          </Button>
-          <Button
-            size="lg"
-            variant="default"
-            className="bg-green-700 hover:bg-green-600"
-          >
-            Book now
-          </Button>
-        </div>
-        <div className="flex items-center gap-6">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-              3
-            </span>
-          </Button>
-          <Avatar className="w-8 h-8">
-            <AvatarImage src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=2960&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" />
-            <AvatarFallback>JD</AvatarFallback>
-          </Avatar>
-        </div>
-
-        {/* Mobile Sidebar Overlay */}
-        {showSidebar && (
-          <div
-            className="fixed inset-0 bg-black/50 bg-opacity-50 z-40 lg:hidden"
-            onClick={() => setShowSidebar(false)}
-          />
-        )}
-
-        {/* Mobile Sidebar */}
-        <UserDashoardSidebar
-          isOpen={showSidebar}
-          onClose={() => setShowSidebar(false)}
-        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 px-2 hover:bg-green-50"
+            >
+              <span className="hidden max-w-[160px] truncate text-sm font-semibold text-[#212529] sm:inline">
+                {user?.fullName || "Patient"}
+              </span>
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-green-100 text-green-700">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">
+                  {user?.fullName || "Patient"}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {user?.email}
+                </span>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => router.push("/patient-dashboard/care")}
+            >
+              <HeartPulse className="mr-2 h-4 w-4" />
+              My Care
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
+
+      {showSidebar ? (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setShowSidebar(false)}
+        />
+      ) : null}
+
+      <UserDashoardSidebar
+        isOpen={showSidebar}
+        onClose={() => setShowSidebar(false)}
+      />
     </>
   );
 }

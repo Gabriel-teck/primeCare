@@ -1,15 +1,10 @@
 "use client";
 
-import {
-  Grid,
-  Calendar,
-  MessageSquare,
-  CreditCard,
-  Stethoscope,
-  X,
-} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { X } from "lucide-react";
+import { patientNavItems, isPatientNavActive } from "@/components/patient/nav";
+import { useEffect, useState } from "react";
 
 interface UserDashboardSidebarProps {
   isOpen?: boolean;
@@ -21,114 +16,92 @@ export default function UserDashoardSidebar({
   onClose,
 }: UserDashboardSidebarProps) {
   const pathname = usePathname();
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
-  const navItems = [
-    { href: "/patient-dashboard", icon: Grid, label: "Dashboard" },
-    {
-      href: "/patient-dashboard/consultation",
-      icon: Stethoscope,
-      label: "Consultation",
-    },
-    {
-      href: "/patient-dashboard/appointment",
-      icon: Calendar,
-      label: "Appointment",
-    },
-    {
-      href: "/patient-dashboard/messages",
-      icon: MessageSquare,
-      label: "Instant Message",
-    },
-    {
-      href: "/patient-dashboard/paymenthistory",
-      icon: CreditCard,
-      label: "Payment History",
-    },
-  ];
+  useEffect(() => {
+    const sync = () => {
+      try {
+        const raw = localStorage.getItem("primecare-message-unread");
+        setUnreadMessages(raw ? Number(raw) || 0 : 0);
+      } catch {
+        setUnreadMessages(0);
+      }
+    };
+    sync();
+    window.addEventListener("storage", sync);
+    window.addEventListener("primecare-unread", sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener("primecare-unread", sync);
+    };
+  }, []);
 
-  const handleLinkClick = () => {
-    if (onClose) {
-      onClose();
-    }
-  };
+  const NavLinks = ({ onNavigate }: { onNavigate?: () => void }) => (
+    <nav className="space-y-1 px-3 py-4">
+      {patientNavItems.map((item) => {
+        const Icon = item.icon;
+        const active = isPatientNavActive(pathname, item.href);
+        const showBadge = item.href.endsWith("/messages") && unreadMessages > 0;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+              active
+                ? "border-r-2 border-green-700 bg-green-50 font-medium text-green-700"
+                : "text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            <Icon className="h-5 w-5 shrink-0" />
+            <span className="flex-1">{item.label}</span>
+            {showBadge ? (
+              <span className="rounded-full bg-green-700 px-2 py-0.5 text-[10px] font-semibold text-white">
+                {unreadMessages}
+              </span>
+            ) : null}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:block fixed left-0 top-0 h-full w-60 bg-white shadow-sm border-r border-gray-200 z-30">
-        <div className="flex text-shadow-lg pl-6 pt-6">
+      <aside className="fixed left-0 top-0 z-30 hidden h-full w-60 border-r border-gray-200 bg-white shadow-sm lg:block">
+        <div className="px-5 pt-6">
           <Link href="/">
-            <span className="text-xl md:text-2xl font-bold">prime</span>
-            <span className="text-2xl md:text-3xl font-extrabold text-green-700">
+            <span className="text-xl font-bold md:text-2xl">prime</span>
+            <span className="text-2xl font-extrabold text-green-700 md:text-3xl">
               Care
             </span>
           </Link>
+          <p className="mt-1 text-xs text-gray-500">Patient</p>
         </div>
-        <nav className="h-full py-8 px-4 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex px-4 py-3 gap-4 text-sm rounded-lg transition-colors ${
-                  isActive
-                    ? "bg-green-50 text-green-700 border-r-2 border-green-700"
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="h-[calc(100%-5rem)] overflow-y-auto">
+          <NavLinks />
+        </div>
       </aside>
 
-      {/* Mobile Sidebar */}
       <aside
-        className={`lg:hidden fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 ${
+        className={`fixed left-0 top-0 z-50 h-full w-64 bg-white shadow-lg transition-transform duration-300 ease-in-out lg:hidden ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div className="flex text-shadow-lg">
-            <Link href="/" onClick={handleLinkClick}>
-              <span className="text-xl font-bold">prime</span>
-              <span className="text-2xl font-extrabold text-green-700">
-                Care
-              </span>
-            </Link>
-          </div>
+        <div className="flex items-center justify-between border-b border-gray-200 p-4">
+          <Link href="/" onClick={onClose}>
+            <span className="text-xl font-bold">prime</span>
+            <span className="text-2xl font-extrabold text-green-700">Care</span>
+          </Link>
           <button
             onClick={onClose}
-            className="p-2 rounded-md hover:bg-gray-100"
+            className="rounded-md p-2 hover:bg-gray-100"
+            aria-label="Close menu"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="h-5 w-5 text-gray-500" />
           </button>
         </div>
-        <nav className="py-4 px-4">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={handleLinkClick}
-                className={`flex px-4 py-3 gap-4 text-sm rounded-lg transition-colors ${
-                  isActive
-                    ? "bg-green-50 text-green-700"
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <NavLinks onNavigate={onClose} />
       </aside>
     </>
   );
