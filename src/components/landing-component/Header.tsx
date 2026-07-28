@@ -27,13 +27,14 @@ export default function Header() {
   };
 
   const handleDashboard = () => {
-    if (user?.role === "admin") {
+    if (user?.role === "admin" || user?.role === "super_admin") {
       router.push("/admin-dashboard");
-      setShowNavBar(false);
+    } else if (user?.role === "doctor") {
+      router.push("/doctor-dashboard");
     } else {
       router.push("/patient-dashboard");
-      setShowNavBar(false);
     }
+    setShowNavBar(false);
   };
 
   const handleProfile = () => {

@@ -11,7 +11,7 @@
     "format:check": "prettier --check .",
     "prepare": "husky",
     "audit": "npm audit",
-    "validate": "npm run lint && npm run format:check && npm run audit && npm run build"
+    "validate": "npm run lint && npm run format:check && npm run audit && npm run build && npm run format"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",

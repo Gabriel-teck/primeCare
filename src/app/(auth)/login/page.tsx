@@ -46,6 +46,8 @@ export default function Login() {
         loggedInUser.role === "super_admin"
       ) {
         router.push("/admin-dashboard");
+      } else if (loggedInUser.role === "doctor") {
+        router.push("/doctor-dashboard");
       } else {
         router.push("/patient-dashboard");
       }
