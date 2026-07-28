@@ -67,7 +67,7 @@ export default function Header() {
             href="/#consultation"
             className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
-            Consultation
+            Online Consultation
           </Link>
           <Link
             href="/#care-service"
@@ -183,7 +183,7 @@ export default function Header() {
                 className="text-lg py-2 hover:text-green-600 transition-colors"
                 onClick={() => setShowNavBar(false)}
               >
-                Consultation
+                Online Consultation
               </Link>
               <Link
                 href="/#care-service"

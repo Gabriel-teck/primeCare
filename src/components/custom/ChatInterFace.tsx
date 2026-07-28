@@ -4,16 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import {
-  Send,
-  Phone,
-  Paperclip,
-  Image as ImageIcon,
-  File,
-  X,
-  Video,
-  Mic,
-} from "lucide-react";
+import { Send, File } from "lucide-react";
 import { Message } from "@/types/chat";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
@@ -49,12 +40,10 @@ export default function ChatInterface() {
   const [currentConversation, setCurrentConversation] =
     useState<Conversation | null>(null);
   const [inputText, setInputText] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Socket event listeners
   useEffect(() => {
@@ -284,38 +273,10 @@ export default function ChatInterface() {
   };
 
   const handleSendMessage = () => {
-    if (!inputText.trim() && !selectedFile) return;
+    if (!inputText.trim()) return;
 
-    console.log("Handling send message:", inputText);
     void sendMessage(inputText);
     setInputText("");
-    setSelectedFile(null);
-  };
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
-  };
-
-  const removeSelectedFile = () => {
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const handleCall = () => {
-    alert("Initiating call with doctor...");
-  };
-
-  const handleVideoCall = () => {
-    alert("Initiating video call with doctor...");
-  };
-
-  const handleVoiceMessage = () => {
-    alert("Voice message feature coming soon...");
   };
 
   if (isLoading) {
@@ -360,27 +321,25 @@ export default function ChatInterface() {
         <div className="overflow-y-auto h-full">
           {conversations.length === 0 ? (
             <div className="p-4 text-center text-gray-500">
-              No conversations yet. Start chatting with a doctor!
+              No conversations yet. Start chatting with your care team!
             </div>
           ) : (
             conversations.map((conversation) => (
               <div
                 key={conversation.id}
                 onClick={() => handleConversationSelect(conversation)}
-                className={`p-4 border-b border-gray-200 cursor-pointer hover:bg-gray-100 ${
+                className={`cursor-pointer border-b border-gray-200 p-4 hover:bg-gray-100 ${
                   currentConversation?.id === conversation.id
                     ? "bg-green-50"
                     : ""
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-700 rounded-full flex items-center justify-center">
-                    <span className="text-white font-semibold">Dr</span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-700">
+                    <span className="font-semibold text-white">CT</span>
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-medium text-gray-800">
-                      Dr. Gabriel Udoh
-                    </h4>
+                    <h4 className="font-medium text-gray-800">Care team</h4>
                     <p className="text-sm text-gray-500">
                       {(conversation.messages?.length ?? 0) > 0
                         ? (
@@ -401,33 +360,15 @@ export default function ChatInterface() {
       {/* Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Chat Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-green-50">
+        <div className="flex items-center justify-between border-b border-gray-200 bg-green-50 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-700 rounded-full flex items-center justify-center">
-              <span className="text-white font-semibold">Dr</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-700">
+              <span className="font-semibold text-white">CT</span>
             </div>
             <div>
-              <h3 className="font-semibold text-green-700">Dr. Gabriel Udoh</h3>
-              <p className="text-sm text-green-600">Online</p>
+              <h3 className="font-semibold text-green-700">Care team</h3>
+              <p className="text-sm text-green-600">Text messaging</p>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={handleCall}
-              variant="outline"
-              size="sm"
-              className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
-            >
-              <Phone className="h-4 w-4" />
-            </Button>
-            <Button
-              onClick={handleVideoCall}
-              variant="outline"
-              size="sm"
-              className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
-            >
-              <Video className="h-4 w-4" />
-            </Button>
           </div>
         </div>
 
@@ -490,62 +431,13 @@ export default function ChatInterface() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* File Preview */}
-        {selectedFile && (
-          <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {selectedFile.type.startsWith("image/") ? (
-                  <ImageIcon className="h-4 w-4 text-green-700" />
-                ) : (
-                  <File className="h-4 w-4 text-green-700" />
-                )}
-                <span className="text-sm text-gray-700">
-                  {selectedFile.name}
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={removeSelectedFile}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
         {/* Input Area */}
-        <div className="p-4 border-t border-gray-200">
+        <div className="border-t border-gray-200 p-4">
           <div className="flex items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              onChange={handleFileSelect}
-              className="hidden"
-              accept="image/*,.pdf,.doc,.docx"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
-            >
-              <Paperclip className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleVoiceMessage}
-              className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
-            >
-              <Mic className="h-4 w-4" />
-            </Button>
             <Input
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="Type your message..."
+              placeholder="Message your care team..."
               onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
               className="flex-1"
             />

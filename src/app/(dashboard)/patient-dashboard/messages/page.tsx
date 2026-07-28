@@ -1,85 +1,96 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import chat from "../../../../../public/assets/chat.webp";
 import { Button } from "@/components/ui/button";
 import ChatInterface from "@/components/custom/ChatInterFace";
 import PaymentModal from "@/components/modals/PaymentModal";
+import { AdminPageHeader } from "@/components/admin";
+import { CHAT_ACCESS_KEY } from "@/components/patient/nav";
 
 export default function MessagesPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
+      <MessagesContent />
+    </Suspense>
+  );
+}
+
+function MessagesContent() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [hasPaid, setHasPaid] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    try {
+      setHasAccess(localStorage.getItem(CHAT_ACCESS_KEY) === "true");
+    } catch {
+      setHasAccess(false);
+    }
+    setReady(true);
+  }, []);
 
   const handlePaymentSuccess = () => {
-    setHasPaid(true);
+    try {
+      localStorage.setItem(CHAT_ACCESS_KEY, "true");
+    } catch {
+      // ignore
+    }
+    setHasAccess(true);
   };
 
-  if (hasPaid) {
+  if (!ready) {
+    return <p className="text-sm text-gray-500">Loading messages…</p>;
+  }
+
+  if (hasAccess) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8 sm:mt-18">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-green-700">
-                PrimeCare Chat
-              </h1>
-              <p className="text-gray-600">
-                Connect with healthcare professionals 24/7
-              </p>
-            </div>
-            <ChatInterface />
-          </div>
-        </div>
+      <div>
+        <AdminPageHeader
+          title="Messages"
+          description="Chat with your PrimeCare care team. Text messages only for now."
+        />
+        <ChatInterface />
       </div>
     );
   }
 
   return (
     <>
-      <section className="relative pt-10 lg:pt-32 bg-white h-screen">
-        <div className="container mx-auto flex flex-col md:flex-row justify-between items-center px-4 sm:px-6 lg:px-8">
-          {/* Chat Text */}
-          <div className="w-full md:w-1/2 space-y-6">
-            <div className="text-[34px] font-semibold text-[#1d884a] text-left tracking-tight leading-9">
-              <h2>24/7 Chats</h2>
-            </div>
-            <div className="pt-4 pb-2 md:pt-14 md:pb-0">
-              <p className="text-base text-[#1d884a] font-medium tracking-normal md:text-2xl">
-                Baba Telehealth offers 24/7 online diagnosis and treatment via
-                your mobile device.
-              </p>
-            </div>
-
-            <div className="leading-6 tracking-normal text-[16px] text-black">
-              <p>
-                <span className="font-bold">Prime</span>
-                <span className="font-bold text-green-700">Care</span> Chat 24/7
-                Services! Don&apos;t wait—start chatting with Baba Telehealth
-                Doctors and healthcare professionals 24/7 and take the first
-                step towards a healthier and happier you.
-              </p>
-            </div>
-            <div>
-              <Button
-                variant="default"
-                size="xl"
-                className="bg-green-700 hover:bg-green-600"
-                onClick={() => setShowPaymentModal(true)}
-              >
-                Pay to Continue
-              </Button>
-            </div>
+      <AdminPageHeader
+        title="Messages"
+        description="Unlock messaging with your care team for follow-ups between visits."
+      />
+      <section className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex flex-col items-center gap-8 p-6 md:flex-row md:justify-between md:p-10">
+          <div className="w-full space-y-4 md:w-1/2">
+            <h2 className="text-2xl font-semibold text-[#1d884a] md:text-3xl">
+              Care team messaging
+            </h2>
+            <p className="text-base text-gray-700 md:text-lg">
+              Message clinicians about symptoms, prescriptions, and visit
+              follow-ups — without waiting for your next appointment.
+            </p>
+            <ul className="list-inside list-disc space-y-1 text-sm text-gray-600">
+              <li>One-time chat access unlock (demo): $25</li>
+              <li>Text messaging with your care team</li>
+              <li>Access stays on this device until you clear site data</li>
+            </ul>
+            <Button
+              className="bg-green-700 hover:bg-green-600"
+              onClick={() => setShowPaymentModal(true)}
+            >
+              Unlock chat access
+            </Button>
           </div>
-
-          {/* Chat Image */}
-          <div className="w-full md:w-1/2 max-w-[600px]">
+          <div className="w-full max-w-[420px] md:w-1/2">
             <Image
               src={chat}
-              alt="chat 24/7"
+              alt="Care team chat"
               width={533}
               height={533}
-              layout="responsive"
+              className="h-auto w-full"
               priority
             />
           </div>

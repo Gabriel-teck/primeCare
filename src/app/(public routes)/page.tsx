@@ -116,7 +116,8 @@ export default function Home() {
                 Online appointments
               </h2>
               <p className="leading-5 mt-[30px] text-sm font-light tracking-tight">
-                Consultation with Doctors and other healthcare professionals
+                Online Consultation with Doctors and other healthcare
+                professionals
                 <br></br>
                 <span className="font-bold">Whenever! Wherever! Anywhere!</span>
               </p>
@@ -201,11 +202,11 @@ export default function Home() {
                 Medical specialties
               </h1>
               <p className="px-5 text-[14px] font-normal tracking-tight leading-6 text-[#828282]">
-                Baba Telehealth provides access to a wide range of specialists
-                and doctors who have the right experience and expertise for your
-                specific conditions. Best of all, you do not have to worry about
-                travelling. Book an Online appointment for the days and times
-                that work best for you.
+                PrimeCare Telehealth provides access to a wide range of
+                specialists and doctors who have the right experience and
+                expertise for your specific conditions. Best of all, you do not
+                have to worry about travelling. Book an Online appointment for
+                the days and times that work best for you.
               </p>
             </div>
           </div>
@@ -226,9 +227,9 @@ export default function Home() {
                 How It Works
               </h1>
               <p className="px-5 text-[14px] font-normal tracking-tight leading-6 text-[#828282]">
-                Baba Telehealth provides access to a wide range of specialists
-                and doctors with the right experience and expertise for your own
-                unique concerns.
+                PrimeCare Telehealth provides access to a wide range of
+                specialists and doctors with the right experience and expertise
+                for your own unique concerns.
               </p>
             </div>
 

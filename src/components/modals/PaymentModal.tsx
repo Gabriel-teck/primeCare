@@ -51,20 +51,21 @@ export default function PaymentModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-green-700">
             <CreditCard className="h-5 w-5" />
-            Payment for Chat Service
+            Unlock care team chat
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+          <div className="rounded-lg border border-green-200 bg-green-50 p-4">
             <div className="flex items-center justify-between">
               <span className="font-medium text-green-800">
-                24/7 Doctor Chat
+                Care team messaging
               </span>
               <span className="font-bold text-green-700">$25.00</span>
             </div>
-            <p className="text-sm text-green-600 mt-1">
-              One-time payment for unlimited chat with healthcare professionals
+            <p className="mt-1 text-sm text-green-600">
+              Demo unlock — payment is simulated. Access is saved on this
+              device.
             </p>
           </div>
 

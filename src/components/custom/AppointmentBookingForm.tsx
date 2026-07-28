@@ -111,7 +111,7 @@ export default function AppointmentBookingForm({
                 defaultChecked
                 className="mr-2"
               />
-              Consultation
+              General visit
             </label>
             <label className="flex items-center">
               <input

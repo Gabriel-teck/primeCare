@@ -18,8 +18,8 @@ export const Footer = () => {
             </Link>
           </div>
           <p className="leading-4 text-[13px] pb-8">
-            Baba Telehealth is a trademark of Baba Healthcare Digital Services
-            inc.
+            PrimeCare Telehealth is a trademark of Baba Healthcare Digital
+            Services inc.
           </p>
           <div className="flex gap-4 leading-4 text-[13px] pb-6">
             <span>Terms of Use</span>

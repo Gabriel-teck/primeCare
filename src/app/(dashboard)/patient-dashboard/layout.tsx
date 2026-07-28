@@ -6,6 +6,8 @@ import UserDashoardHeader from "@/components/dashboard-component/UserDashboardHe
 import { AuthProvider } from "@/context/AuthContext";
 import { SocketProvider } from "@/context/SocketContext";
 import { ChatProvider } from "@/context/ChatContext";
+import { PatientGuard } from "@/components/patient";
+import { Toaster } from "@/components/ui/sonner";
 
 const gabarito = Gabarito({
   subsets: ["latin"],
@@ -13,8 +15,8 @@ const gabarito = Gabarito({
 });
 
 export const metadata: Metadata = {
-  title: "PrimeCare",
-  description: "An Online Medic-care",
+  title: "PrimeCare Patient",
+  description: "PrimeCare patient care dashboard",
 };
 
 export default function PatientLayout({
@@ -28,15 +30,17 @@ export default function PatientLayout({
         <AuthProvider>
           <SocketProvider>
             <ChatProvider>
-              <div className="flex h-screen bg-gray-50 ">
-                {/* Sidebar is now handled within the header component */}
-                <div className="flex-1 flex flex-col">
-                  <UserDashoardHeader />
-                  <main className="flex-1 pt-16 lg:pt-0 lg:ml-60">
-                    <Providers>{children}</Providers>
-                  </main>
-                </div>
-              </div>
+              <PatientGuard>
+                <Providers>
+                  <div className="min-h-screen bg-[#f8f9fa]">
+                    <UserDashoardHeader />
+                    <main className="min-w-0 overflow-x-hidden px-3 pb-10 pt-20 sm:px-6 lg:ml-60 lg:px-8">
+                      {children}
+                    </main>
+                    <Toaster />
+                  </div>
+                </Providers>
+              </PatientGuard>
             </ChatProvider>
           </SocketProvider>
         </AuthProvider>

@@ -68,7 +68,7 @@ export const steps = [
   },
   {
     id: 2,
-    title: "Consultation Type",
+    title: "Online Consultation Type",
     description:
       "Connect your device anywhere in your home and turn it on. Follow the app's configuration instructions. Make sure your home WiFi is working well. Consult with our telehealth urgent care or medical specialties by text, phone call or video call.",
     btnImage: "/assets/btnImage2.avif",
