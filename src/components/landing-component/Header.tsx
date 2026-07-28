@@ -63,25 +63,25 @@ export default function Header() {
             Home
           </Link>
           <Link
-            href="#2"
+            href="/#consultation"
             className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
             Consultation
           </Link>
           <Link
-            href="#3"
+            href="/#care-service"
             className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
             Care Service
           </Link>
           <Link
-            href="#4"
+            href="/#how-it-works"
             className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
             How It Works
           </Link>
           <Link
-            href="#5"
+            href="/#about"
             className="text-black transition-colors hover:bg-gray-100 rounded-md px-6 py-2"
           >
             About us
@@ -178,32 +178,32 @@ export default function Header() {
                 Home
               </Link>
               <Link
-                href="#2"
-                className="text-lg py-2 hover:text-green-600 transition-colors"
-                onClick={() => setShowNavBar(false)}
-              >
-                Care Service
-              </Link>
-              <Link
-                href="#3"
+                href="/#consultation"
                 className="text-lg py-2 hover:text-green-600 transition-colors"
                 onClick={() => setShowNavBar(false)}
               >
                 Consultation
               </Link>
               <Link
-                href="#4"
+                href="/#care-service"
+                className="text-lg py-2 hover:text-green-600 transition-colors"
+                onClick={() => setShowNavBar(false)}
+              >
+                Care Service
+              </Link>
+              <Link
+                href="/#how-it-works"
+                className="text-lg py-2 hover:text-green-600 transition-colors"
+                onClick={() => setShowNavBar(false)}
+              >
+                How It Works
+              </Link>
+              <Link
+                href="/#about"
                 className="text-lg py-2 hover:text-green-600 transition-colors"
                 onClick={() => setShowNavBar(false)}
               >
                 About us
-              </Link>
-              <Link
-                href="#5"
-                className="text-lg py-2 hover:text-green-600 transition-colors"
-                onClick={() => setShowNavBar(false)}
-              >
-                Contact us
               </Link>
 
               {/* Mobile authentication buttons */}
