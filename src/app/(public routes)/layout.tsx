@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Gabarito } from "next/font/google";
 import "../globals.css";
 import Providers from "../providers";
-import { ThemeProvider } from "@/context/ThemeContext";
 import Header from "@/components/landing-component/Header";
 import { Footer } from "@/components/landing-component/Footer";
 import { AuthProvider } from "@/context/AuthContext";
@@ -25,13 +24,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${gabarito.variable} antialiased`}>
-        <ThemeProvider>
-          <AuthProvider>
-                  <Header />
-                  <Providers>{children}</Providers>
-                  <Footer />
-          </AuthProvider>
-        </ThemeProvider>
+        <AuthProvider>
+          <Header />
+          <Providers>{children}</Providers>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

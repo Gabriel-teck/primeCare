@@ -74,10 +74,10 @@ export default function AdminDashboard() {
   const today = new Date().toISOString().split("T")[0];
   const todayAppointments = appointments.filter((apt) => apt.date === today);
   const pendingAppointments = appointments.filter(
-    (apt) => apt.status === "pending"
+    (apt) => apt.status === "pending",
   );
   const pendingConsultations = consultations.filter(
-    (cons) => cons.status === "pending"
+    (cons) => cons.status === "pending",
   );
 
   // Get today's schedule (appointments + consultations)
@@ -150,9 +150,9 @@ export default function AdminDashboard() {
         ((monthlyAppointments.length + monthlyConsultations.length) /
           Math.max(
             1,
-            monthlyAppointments.length + monthlyConsultations.length - 5
+            monthlyAppointments.length + monthlyConsultations.length - 5,
           )) *
-          100
+          100,
       )}%`,
       icon: <BarChart2 className="w-5 h-5 text-green-700" />,
       sub: "vs last month",
@@ -242,8 +242,8 @@ export default function AdminDashboard() {
               Admin Dashboard
             </h1>
             <p className="text-gray-500 mt-1 text-sm md:text-base">
-              Welcome back, {user?.fullName || "Admin"}. Here's what's happening
-              today.
+              Welcome back, {user?.fullName || "Admin"}. Here&apos;s what&apos;s
+              happening today.
             </p>
           </div>
         </div>
@@ -279,7 +279,7 @@ export default function AdminDashboard() {
           <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Calendar className="w-5 h-5 text-green-700" />
-              Today's Schedule
+              Today&apos;s Schedule
             </CardTitle>
             <Link href="/admin-dashboard/admin-appointments">
               <Button
@@ -365,7 +365,9 @@ export default function AdminDashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">This Month's Summary</CardTitle>
+              <CardTitle className="text-base">
+                This Month&apos;s Summary
+              </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
               {monthSummary.map((item) => (
@@ -402,8 +404,8 @@ export default function AdminDashboard() {
                       item.status === "Online"
                         ? "text-green-700"
                         : item.status === "Healthy"
-                        ? "text-green-500"
-                        : "text-yellow-600"
+                          ? "text-green-500"
+                          : "text-yellow-600"
                     }`}
                   >
                     {item.status}

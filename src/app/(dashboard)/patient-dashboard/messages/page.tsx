@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import chat from "../../../../../public/assets/chat.webp";
 import { Button } from "@/components/ui/button";
@@ -56,9 +55,9 @@ export default function MessagesPage() {
               <p>
                 <span className="font-bold">Prime</span>
                 <span className="font-bold text-green-700">Care</span> Chat 24/7
-                Services! Don't wait—start chatting with Baba Telehealth Doctors
-                and healthcare professionals 24/7 and take the first step
-                towards a healthier and happier you.
+                Services! Don&apos;t wait—start chatting with Baba Telehealth
+                Doctors and healthcare professionals 24/7 and take the first
+                step towards a healthier and happier you.
               </p>
             </div>
             <div>

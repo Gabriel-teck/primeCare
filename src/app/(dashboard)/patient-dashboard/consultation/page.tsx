@@ -21,7 +21,7 @@ export default function ConsultationPage() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="book">
-            <ConsultationBookingForm onSuccess={()=>setTab("history")}/>
+            <ConsultationBookingForm onSuccess={() => setTab("history")} />
           </TabsContent>
           <TabsContent value="history">
             <ConsultationHistory />

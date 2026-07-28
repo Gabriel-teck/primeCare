@@ -42,9 +42,13 @@ export default function ForgetPassword() {
 
       // Show success message
       setSuccess(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.log("🔍 Forget Password: Error:", err);
-      setError(err.message || "Failed to send reset email. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to send reset email. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -59,7 +63,7 @@ export default function ForgetPassword() {
             Create a new password
           </h1>
           <p className="text-sm text-[#212529] pb-6">
-            We'll email you a link to make a brand new password.
+            We&apos;ll email you a link to make a brand new password.
           </p>
 
           {/* Error message */}
@@ -74,8 +78,9 @@ export default function ForgetPassword() {
             <div className="mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
               <p className="font-bold">Reset email sent!</p>
               <p className="text-sm mt-1">
-                If an account with that email exists, we've sent you a password
-                reset link. Please check your email and follow the instructions.
+                If an account with that email exists, we&apos;ve sent you a
+                password reset link. Please check your email and follow the
+                instructions.
               </p>
             </div>
           )}

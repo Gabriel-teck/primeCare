@@ -44,8 +44,12 @@ export default function Login() {
 
       // Redirect to dashboard or home page on success
       router.push("/");
-    } catch (err: any) {
-      setError(err.message || "Login failed. Please check your credentials.");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Login failed. Please check your credentials.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -134,7 +138,7 @@ export default function Login() {
 
               {/* Sign up instead */}
               <Link href="/register" className="font-medium">
-                Don't have an account?{" "}
+                Don&apos;t have an account?{" "}
                 <span className="text-green-500 font-bold">Sign up</span>
               </Link>
             </div>

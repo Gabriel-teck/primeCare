@@ -42,11 +42,10 @@ type ConversationWithPatient = Conversation & {
 
 export default function AdminChatsPage() {
   const { token, user } = useAuth();
-  const { socket, isConnected } = useSocket();
+  const { socket } = useSocket();
   const [conversations, setConversations] = useState<ConversationWithPatient[]>(
-    []
+    [],
   );
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedConversation, setSelectedConversation] =
     useState<ConversationWithPatient | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -72,19 +71,19 @@ export default function AdminChatsPage() {
           "http://localhost:3001/chat/conversations",
           {
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
 
         console.log(
           "Conversations response status:",
-          conversationsResponse.status
+          conversationsResponse.status,
         );
 
         if (!conversationsResponse.ok) {
           const errorText = await conversationsResponse.text();
           console.error("Conversations response error:", errorText);
           throw new Error(
-            `Failed to fetch conversations: ${conversationsResponse.status} - ${errorText}`
+            `Failed to fetch conversations: ${conversationsResponse.status} - ${errorText}`,
           );
         }
 
@@ -95,7 +94,7 @@ export default function AdminChatsPage() {
         if (!Array.isArray(conversationsData)) {
           console.error(
             "Conversations data is not an array:",
-            conversationsData
+            conversationsData,
           );
           setConversations([]);
           return;
@@ -109,7 +108,7 @@ export default function AdminChatsPage() {
         const conversationsWithPatients = conversationsData.map(
           (conv: Conversation) => {
             const patient = patientsData.find(
-              (p: Patient) => p.id === conv.patientId
+              (p: Patient) => p.id === conv.patientId,
             );
             const lastMessage =
               conv.messages?.length > 0
@@ -118,7 +117,7 @@ export default function AdminChatsPage() {
 
             const unreadCount =
               conv.messages?.filter(
-                (msg: Message) => msg.sender === "patient" && !msg.read
+                (msg: Message) => msg.sender === "patient" && !msg.read,
               ).length || 0;
 
             const initials =
@@ -136,19 +135,17 @@ export default function AdminChatsPage() {
               unreadCount,
               initials,
             };
-          }
+          },
         );
 
         console.log("Processed conversations:", conversationsWithPatients);
         setConversations(conversationsWithPatients);
-        setPatients(patientsData);
       } catch (error) {
         console.error("Failed to fetch data:", error);
         setError(
-          error instanceof Error ? error.message : "Failed to fetch data"
+          error instanceof Error ? error.message : "Failed to fetch data",
         );
         setConversations([]);
-        setPatients([]);
       } finally {
         setLoading(false);
       }
@@ -161,18 +158,21 @@ export default function AdminChatsPage() {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("receiveMessage", (message: any) => {
-      setMessages((prev) => [...prev, message]);
+    socket.on(
+      "receiveMessage",
+      (message: Message & { conversationId?: string }) => {
+        setMessages((prev) => [...prev, message]);
 
-      // Update conversation's last message
-      setConversations((prev) =>
-        prev.map((conv) =>
-          conv.id === message.conversationId
-            ? { ...conv, lastMessage: message.content }
-            : conv
-        )
-      );
-    });
+        // Update conversation's last message
+        setConversations((prev) =>
+          prev.map((conv) =>
+            conv.id === message.conversationId
+              ? { ...conv, lastMessage: message.content }
+              : conv,
+          ),
+        );
+      },
+    );
 
     return () => {
       socket.off("receiveMessage");
@@ -200,7 +200,7 @@ export default function AdminChatsPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -225,7 +225,7 @@ export default function AdminChatsPage() {
     } catch (error) {
       console.error("Failed to load messages:", error);
       setError(
-        error instanceof Error ? error.message : "Failed to load messages"
+        error instanceof Error ? error.message : "Failed to load messages",
       );
       setMessages([]);
     } finally {
@@ -239,13 +239,14 @@ export default function AdminChatsPage() {
   };
 
   const handleSendMessage = () => {
-    if (!inputText.trim() || !selectedConversation || !socket) return;
+    if (!inputText.trim() || !selectedConversation || !socket || !user?.id)
+      return;
 
-    const newMessage = {
+    const newMessage: Message = {
       id: `temp-${Date.now()}`,
       content: inputText,
-      sender: "admin" as const,
-      senderId: user?.id,
+      sender: "admin",
+      senderId: user.id,
       createdAt: new Date().toISOString(),
     };
 
@@ -293,7 +294,7 @@ export default function AdminChatsPage() {
 
   const unreadCount = conversations.reduce(
     (sum, conv) => sum + conv.unreadCount,
-    0
+    0,
   );
   const activeCount = conversations.length;
 

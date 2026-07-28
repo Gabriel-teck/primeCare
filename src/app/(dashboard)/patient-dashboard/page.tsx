@@ -14,7 +14,6 @@
 //      // Optionally, you can show a loading spinner or redirect to login
 //      return <div>Loading...</div>;
 //    }
-  
 
 //   return (
 //     <div className="p-4 md:p-8 sm:mt-12 space-y-8">
@@ -45,8 +44,6 @@
 //   );
 // }
 
-
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -54,7 +51,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getMyAppointments } from "@/lib/api/appointment";
 import { getMyConsultations } from "@/lib/api/consultation";
 import { Button } from "@/components/ui/button";
-import { Calendar, MessageCircle, User, FilePlus } from "lucide-react";
+import { Calendar, MessageCircle, User } from "lucide-react";
 import Link from "next/link";
 
 type Appointment = {
@@ -78,27 +75,27 @@ export default function PatientDashboard() {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
 
- useEffect(() => {
-   if (!token) return;
+  useEffect(() => {
+    if (!token) return;
 
-   const fetchData = async () => {
-     setLoading(true);
-     try {
-       const [appts, consults] = await Promise.all([
-         getMyAppointments(token),
-         getMyConsultations(token),
-       ]);
-       setAppointments(appts || []);
-       setConsultations(consults || []);
-     } catch (error) {
-       console.error("Error fetching data:", error);
-     } finally {
-       setLoading(false);
-     }
-   };
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [appts, consults] = await Promise.all([
+          getMyAppointments(token),
+          getMyConsultations(token),
+        ]);
+        setAppointments(appts || []);
+        setConsultations(consults || []);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-   fetchData();
- }, [token]);
+    fetchData();
+  }, [token]);
 
   // Find next upcoming appointment/consultation (not cancelled, date in future)
   const now = new Date();
@@ -107,12 +104,12 @@ export default function PatientDashboard() {
       .filter(
         (item) =>
           item.status !== "cancelled" &&
-          new Date(item.date + "T" + item.time) > now
+          new Date(item.date + "T" + item.time) > now,
       )
       .sort(
         (a, b) =>
           new Date(a.date + "T" + a.time).getTime() -
-          new Date(b.date + "T" + b.time).getTime()
+          new Date(b.date + "T" + b.time).getTime(),
       )[0];
 
   const nextAppointment = getNext(appointments);

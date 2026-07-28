@@ -1,7 +1,14 @@
-import Image from "next/image";
+import Image, { StaticImageData } from "next/image";
 import ranks from "../../../public/assets/ranks.svg";
 
-const TestimonialCard = ({ testimonial }: { testimonial: any }) => {
+type Testimonial = {
+  name: string;
+  image: string | StaticImageData;
+  rating?: number;
+  message: string;
+};
+
+const TestimonialCard = ({ testimonial }: { testimonial: Testimonial }) => {
   return (
     <div className="bg-white rounded-lg shadow-sm p-6 w-full max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-2">

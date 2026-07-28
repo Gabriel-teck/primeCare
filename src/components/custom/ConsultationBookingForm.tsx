@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, Video } from "lucide-react";
+import { Video } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -37,7 +37,6 @@ export default function ConsultationBookingForm({
     register,
     handleSubmit,
     reset,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -69,8 +68,8 @@ export default function ConsultationBookingForm({
       setFileName("");
       if (onSuccess) onSuccess();
       setTimeout(() => setSuccess(false), 3000);
-    } catch (err: any) {
-      setError(err.message || "Booking failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Booking failed");
     }
   };
 
@@ -252,7 +251,7 @@ export default function ConsultationBookingForm({
             </li>
             <li>
               <span className="font-medium text-green-700">Confirmation:</span>{" "}
-              You'll receive a Google Meet link upon acceptance
+              You&apos;ll receive a Google Meet link upon acceptance
             </li>
             <li>
               <span className="font-medium text-green-700">Consultation:</span>{" "}

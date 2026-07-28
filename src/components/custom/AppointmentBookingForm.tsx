@@ -54,8 +54,8 @@ export default function AppointmentBookingForm({
       setSuccess(true);
       reset();
       if (onSuccess) onSuccess(); // Switch tab on success
-    } catch (err: any) {
-      setError(err.message || "Booking failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Booking failed");
     }
   };
 
@@ -312,7 +312,7 @@ export default function AppointmentBookingForm({
             </li>
             <li>
               <span className="font-medium text-green-700">Confirmation:</span>{" "}
-              We'll contact you within 24 hours to confirm
+              We&apos;ll contact you within 24 hours to confirm
             </li>
             <li>
               <span className="font-medium text-green-700">Appointment:</span>{" "}

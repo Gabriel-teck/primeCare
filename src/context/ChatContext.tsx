@@ -11,17 +11,39 @@ import { Message } from "@/types/chat";
 import { useSocket } from "./SocketContext";
 import { useAuth } from "./AuthContext";
 
+type ChatApiMessage = {
+  id: string;
+  content: string;
+  sender: string;
+  createdAt: string;
+  conversationId?: string;
+};
+
+type Conversation = {
+  id: string;
+  patientId?: string;
+  adminId?: string;
+  messages?: ChatApiMessage[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type TypingPayload = {
+  isTyping?: boolean;
+  userId?: string;
+};
+
 interface ChatContextType {
   messages: Message[];
-  conversations: any[];
-  currentConversation: any | null;
+  conversations: Conversation[];
+  currentConversation: Conversation | null;
   isConnected: boolean;
   isLoading: boolean;
   sendMessage: (content: string) => void;
   joinConversation: (conversationId: string) => void;
   loadConversations: () => void;
   loadMessages: (conversationId: string) => void;
-  setCurrentConversation: (conversation: any) => void;
+  setCurrentConversation: (conversation: Conversation | null) => void;
   clearMessages: () => void;
 }
 
@@ -29,18 +51,17 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [currentConversation, setCurrentConversation] = useState<any | null>(
-    null
-  );
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversation, setCurrentConversation] =
+    useState<Conversation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { socket, isConnected } = useSocket();
-  const { token, user } = useAuth();
+  const { token } = useAuth();
 
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("receiveMessage", (message: any) => {
+    socket.on("receiveMessage", (message: ChatApiMessage) => {
       setMessages((prev) => [
         ...prev,
         {
@@ -53,7 +74,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       ]);
     });
 
-    socket.on("userTyping", (data: any) => {
+    socket.on("userTyping", (data: TypingPayload) => {
       // Handle typing indicators
       console.log("User typing:", data);
     });
@@ -124,12 +145,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (response.ok) {
-        const data = await response.json();
-        const formattedMessages: Message[] = data.map((msg: any) => ({
+        const data: ChatApiMessage[] = await response.json();
+        const formattedMessages: Message[] = data.map((msg) => ({
           id: msg.id,
           text: msg.content,
           sender: msg.sender === "admin" ? "doctor" : "user",

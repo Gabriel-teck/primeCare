@@ -6,7 +6,6 @@ import {
   Clock,
   XCircle,
   Eye,
-  User,
   Calendar,
   ChevronDown,
   AlertTriangle,
@@ -168,7 +167,7 @@ export default function AdminAppointmentsPage() {
       isConsultation: true,
     })),
   ].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 
   // Filter data
@@ -212,7 +211,7 @@ export default function AdminAppointmentsPage() {
   ];
 
   const pendingReviewCount = combinedData.filter(
-    (a) => a.status === "pending"
+    (a) => a.status === "pending",
   ).length;
 
   // Handle status updates
@@ -229,14 +228,14 @@ export default function AdminAppointmentsPage() {
       if (item.isConsultation) {
         setConsultations((prev) =>
           prev.map((cons) =>
-            cons.id === item.id ? { ...cons, status: newStatus } : cons
-          )
+            cons.id === item.id ? { ...cons, status: newStatus } : cons,
+          ),
         );
       } else {
         setAppointments((prev) =>
           prev.map((apt) =>
-            apt.id === item.id ? { ...apt, status: newStatus } : apt
-          )
+            apt.id === item.id ? { ...apt, status: newStatus } : apt,
+          ),
         );
       }
     } catch (error) {
@@ -573,7 +572,7 @@ export default function AdminAppointmentsPage() {
                           {page}
                         </PaginationLink>
                       </PaginationItem>
-                    )
+                    ),
                   )}
 
                   <PaginationItem>

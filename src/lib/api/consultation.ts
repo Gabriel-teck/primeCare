@@ -1,6 +1,22 @@
 const API_BASE_URL = "http://localhost:3001";
 
-export async function bookConsultation(data: any, token: string, file?: File) {
+export type ConsultationPayload = {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  date: string;
+  time: string;
+  reason: string;
+  consultationType: string;
+  file?: FileList;
+};
+
+export async function bookConsultation(
+  data: ConsultationPayload,
+  token: string | null,
+  file?: File,
+) {
+  if (!token) throw new Error("Not authenticated");
   const formData = new FormData();
   Object.entries(data).forEach(([key, value]) => {
     if (key !== "file") formData.append(key, value as string);
@@ -16,7 +32,8 @@ export async function bookConsultation(data: any, token: string, file?: File) {
   return res.json();
 }
 
-export async function getMyConsultations(token: string) {
+export async function getMyConsultations(token: string | null) {
+  if (!token) throw new Error("Not authenticated");
   const res = await fetch(`${API_BASE_URL}/consultations/my`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -24,7 +41,8 @@ export async function getMyConsultations(token: string) {
   return res.json();
 }
 
-export async function cancelConsultation(id: string, token: string) {
+export async function cancelConsultation(id: string, token: string | null) {
+  if (!token) throw new Error("Not authenticated");
   const res = await fetch(`http://localhost:3001/consultations/cancel/${id}`, {
     method: "PATCH",
     headers: {
@@ -40,8 +58,9 @@ export async function rescheduleConsultation(
   id: string,
   date: string,
   time: string,
-  token: string
+  token: string | null,
 ) {
+  if (!token) throw new Error("Not authenticated");
   const res = await fetch(
     `http://localhost:3001/consultations/reschedule/${id}`,
     {
@@ -51,14 +70,15 @@ export async function rescheduleConsultation(
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ date, time }),
-    }
+    },
   );
   if (!res.ok) throw new Error("Reschedule failed");
   return res.json();
 }
 
 //Admin
-export async function getAllConsultations(token: string) {
+export async function getAllConsultations(token: string | null) {
+  if (!token) throw new Error("Not authenticated");
   const res = await fetch(`${API_BASE_URL}/consultations`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -66,7 +86,12 @@ export async function getAllConsultations(token: string) {
   return res.json();
 }
 
-export async function updateConsultation(id: string, data: any, token: string) {
+export async function updateConsultation(
+  id: string,
+  data: Record<string, unknown>,
+  token: string | null,
+) {
+  if (!token) throw new Error("Not authenticated");
   const res = await fetch(`${API_BASE_URL}/consultations/${id}`, {
     method: "PATCH",
     headers: {

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Gabarito } from "next/font/google";
 import "../globals.css";
 import Header from "@/components/landing-component/Header";
-import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 
 const gabarito = Gabarito({
@@ -23,12 +22,10 @@ export default function AuthLayout({
   return (
     <html lang="en">
       <body className={`${gabarito.variable} antialiased`}>
-        <ThemeProvider>
-          <AuthProvider>
-            <Header />
-            {children}
-          </AuthProvider>
-        </ThemeProvider>
+        <AuthProvider>
+          <Header />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

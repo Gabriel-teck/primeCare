@@ -26,7 +26,7 @@ export async function login(email: string, password: string) {
 export async function registerUser(
   email: string,
   fullName: string,
-  password: string
+  password: string,
 ) {
   const res = await fetch(`${API_BASE_URL}/users/register`, {
     method: "POST",

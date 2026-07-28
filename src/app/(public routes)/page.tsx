@@ -136,8 +136,8 @@ export default function Home() {
                 Urgent Care
               </h3>
               <p className="text-[14px] tracking-tight leading-5 font-normal mb-[30px]">
-                Same-day doctor's appointment for diagnosis and treatment of
-                medical illnesses that are acute but do not pose an immediate
+                Same-day doctor&apos;s appointment for diagnosis and treatment
+                of medical illnesses that are acute but do not pose an immediate
                 threat to life and health
               </p>
             </div>
