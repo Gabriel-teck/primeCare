@@ -4,10 +4,24 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import * as authApi from "@/lib/api/auth";
 import * as userApi from "@/lib/api/user";
 
-const AuthContext = createContext<any>(null);
+export type AuthUser = {
+  id: string;
+  email: string;
+  fullName: string;
+  role: string;
+};
+
+type AuthContextType = {
+  user: AuthUser | null;
+  token: string | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+};
+
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,5 +67,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }

@@ -8,13 +8,7 @@ import {
   cancelAppointment,
   rescheduleAppointment,
 } from "@/lib/api/appointment";
-import {
-  Calendar,
-  Clock,
-  XCircle,
-  CheckCircle,
-  RefreshCcw,
-} from "lucide-react";
+import { Clock, XCircle, CheckCircle, RefreshCcw } from "lucide-react";
 
 type Appointment = {
   id: string;
@@ -52,10 +46,10 @@ export default function AppointmentHistory() {
     try {
       await cancelAppointment(id, token);
       setAppointments((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, status: "cancelled" } : a))
+        prev.map((a) => (a.id === id ? { ...a, status: "cancelled" } : a)),
       );
-    } catch (err: any) {
-      setError(err.message || "Cancel failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Cancel failed");
     } finally {
       setActionLoading(null);
     }
@@ -71,7 +65,7 @@ export default function AppointmentHistory() {
         id,
         rescheduleForm.date,
         rescheduleForm.time,
-        token
+        token,
       );
       setAppointments((prev) =>
         prev.map((a) =>
@@ -84,13 +78,13 @@ export default function AppointmentHistory() {
                   time: rescheduleForm.time,
                 },
               }
-            : a
-        )
+            : a,
+        ),
       );
       setRescheduleId(null);
       setRescheduleForm({ date: "", time: "" });
-    } catch (err: any) {
-      setError(err.message || "Reschedule failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Reschedule failed");
     } finally {
       setActionLoading(null);
     }

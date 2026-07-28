@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useCallback,
   ReactNode,
 } from "react";
 import { io, Socket } from "socket.io-client";
@@ -24,7 +25,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const { token, user } = useAuth();
 
-  const connect = () => {
+  const connect = useCallback(() => {
     if (!token || !user) {
       console.log("Socket: No token or user, skipping connection");
       return;
@@ -57,16 +58,18 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     });
 
     setSocket(newSocket);
-  };
+  }, [token, user]);
 
-  const disconnect = () => {
-    if (socket) {
-      console.log("Socket: Disconnecting...");
-      socket.disconnect();
-      setSocket(null);
-      setIsConnected(false);
-    }
-  };
+  const disconnect = useCallback(() => {
+    setSocket((current) => {
+      if (current) {
+        console.log("Socket: Disconnecting...");
+        current.disconnect();
+      }
+      return null;
+    });
+    setIsConnected(false);
+  }, []);
 
   useEffect(() => {
     console.log("Socket: useEffect triggered", {
@@ -82,7 +85,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     return () => {
       disconnect();
     };
-  }, [token, user]);
+  }, [token, user, connect, disconnect]);
 
   return (
     <SocketContext.Provider

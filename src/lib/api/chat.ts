@@ -5,7 +5,7 @@ export async function getMessages(conversationId: string, token: string) {
     `${API_BASE_URL}/chat/conversations/${conversationId}/messages`,
     {
       headers: { Authorization: `Bearer ${token}` },
-    }
+    },
   );
   if (!res.ok) throw new Error("Failed to fetch");
   return res.json();
@@ -14,7 +14,7 @@ export async function getMessages(conversationId: string, token: string) {
 export async function sendMessage(
   conversationId: string,
   content: string,
-  token: string
+  token: string,
 ) {
   const res = await fetch(`${API_BASE_URL}/chat/send`, {
     method: "POST",

@@ -44,7 +44,7 @@ const registerSchema = z
       .boolean()
       .refine(
         (val) => val === true,
-        "You must accept the terms and conditions"
+        "You must accept the terms and conditions",
       ),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -86,8 +86,12 @@ export default function Register() {
 
       //redirect to login page on success
       router.push("/login?message=Registration successful! Please log in.");
-    } catch (err: any) {
-      setError(err.message || "Registration failed. Please try again.");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Registration failed. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -330,7 +334,7 @@ export default function Register() {
                   className="w-4 h-4 text-green-600 border-green-300 rounded mt-1"
                 />
                 <label className="text-sm text-[#333]">
-                  I have read and accept PrimeCare's{" "}
+                  I have read and accept PrimeCare&apos;s{" "}
                   <Link href="#" className="text-green-500">
                     Terms of Use{" "}
                   </Link>

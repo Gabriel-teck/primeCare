@@ -10,7 +10,7 @@ export async function getUser(token: string) {
 
 export async function checkEmailExists(email: string) {
   const res = await fetch(
-    `${API_BASE_URL}/users/exists?email=${encodeURIComponent(email)}`
+    `${API_BASE_URL}/users/exists?email=${encodeURIComponent(email)}`,
   );
   if (!res.ok) throw new Error("Failed to check email");
   const data = await res.json();

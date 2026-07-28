@@ -19,7 +19,7 @@ export default function CustomCarousel() {
   const startAutoPlay = () => {
     intervalRef.current = setInterval(() => {
       setCurrentIndex((prev) =>
-        prev + itemsPerView >= carouselItems.length ? 0 : prev + itemsPerView
+        prev + itemsPerView >= carouselItems.length ? 0 : prev + itemsPerView,
       );
     }, 5000);
   };
@@ -33,7 +33,7 @@ export default function CustomCarousel() {
     setCurrentIndex((prev) =>
       prev - itemsPerView < 0
         ? carouselItems.length - itemsPerView
-        : prev - itemsPerView
+        : prev - itemsPerView,
     );
     startAutoPlay();
   };
@@ -41,7 +41,7 @@ export default function CustomCarousel() {
   const handleNext = () => {
     stopAutoPlay();
     setCurrentIndex((prev) =>
-      prev + itemsPerView >= carouselItems.length ? 0 : prev + itemsPerView
+      prev + itemsPerView >= carouselItems.length ? 0 : prev + itemsPerView,
     );
     startAutoPlay();
   };

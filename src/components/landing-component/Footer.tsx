@@ -1,8 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import youtube from "../../../public/assets/youtube.svg";
-import x from "../../../public/assets/x.png";
-import fb from "../../../public/assets/fb.png";
 import insta from "../../../public/assets/insta.webp";
 
 export const Footer = () => {
@@ -27,23 +25,30 @@ export const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t-1 flex flex-col sm:flex-row sm:justify-between sm:py-4 space-y-2">
-          <p className="text-[14px] font-normal leading-6 pt-4">© 2025 BabaTelehealth. All rights reserved</p>
+        <div className=" flex flex-col sm:flex-row sm:justify-between sm:py-4 space-y-2">
+          <p className="text-[14px] font-normal leading-6 pt-4">
+            © 2025 PrimeCare health. All rights reserved
+          </p>
           <div className="flex gap-4 items-center">
+            <Link href=""></Link>
             <Link href="">
-              <Image src={fb} alt="facebook" width={20} height={20} />
+              <Image
+                src={insta}
+                alt="insta"
+                width={20}
+                height={20}
+                className="size-5 object-contain"
+              />
             </Link>
+
             <Link href="">
-              {" "}
-              <Image src={insta} alt="insta" width={20} height={20} />
-            </Link>
-            <Link href="">
-              {" "}
-              <Image src={x} alt="x" width={20} height={20} />
-            </Link>
-            <Link href="">
-              {" "}
-              <Image src={youtube} alt="youtube" width={20} height={20} />
+              <Image
+                src={youtube}
+                alt="youtube"
+                width={20}
+                height={20}
+                className="size-5 object-contain"
+              />
             </Link>
           </div>
         </div>

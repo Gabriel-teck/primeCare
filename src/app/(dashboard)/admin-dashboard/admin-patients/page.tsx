@@ -1,15 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Eye,
-  Phone,
-  Mail,
-  ChevronDown,
-  Plus,
-  Calendar,
-  User,
-} from "lucide-react";
+import { Eye, Phone, Mail, ChevronDown, Plus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getAllPatients } from "@/lib/api/user";
 import { getAllAppointments } from "@/lib/api/appointment";
@@ -138,10 +130,10 @@ export default function AdminPatientsPage() {
   const patientsWithStats: PatientWithStats[] = patients.map((patient) => {
     // Get patient's appointments and consultations
     const patientAppointments = appointments.filter(
-      (apt) => apt.email === patient.email
+      (apt) => apt.email === patient.email,
     );
     const patientConsultations = consultations.filter(
-      (cons) => cons.email === patient.email
+      (cons) => cons.email === patient.email,
     );
 
     // Calculate last visit
@@ -506,7 +498,7 @@ export default function AdminPatientsPage() {
                           {page}
                         </PaginationLink>
                       </PaginationItem>
-                    )
+                    ),
                   )}
 
                   <PaginationItem>

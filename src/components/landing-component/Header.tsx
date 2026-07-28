@@ -1,16 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTheme } from "@/context/ThemeContext";
-import {
-  Moon,
-  Sun,
-  Menu,
-  X,
-  User,
-  LogOut,
-  LayoutDashboard,
-} from "lucide-react";
+import { Menu, X, User, LogOut, LayoutDashboard } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   DropdownMenu,
@@ -25,7 +16,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
 export default function Header() {
-  const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const router = useRouter();
   const [showNavBar, setShowNavBar] = useState(false);
@@ -76,25 +66,25 @@ export default function Header() {
             href="#2"
             className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
-            Care Service
+            Consultation
           </Link>
           <Link
             href="#3"
             className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
-            Consultation
+            Care Service
           </Link>
           <Link
             href="#4"
             className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
-            About us
+            How It Works
           </Link>
           <Link
             href="#5"
             className="text-black transition-colors hover:bg-gray-100 rounded-md px-6 py-2"
           >
-            Contact us
+            About us
           </Link>
 
           {/* Conditional rendering based on authentication */}
@@ -153,15 +143,6 @@ export default function Header() {
               </Link>
             </>
           )}
-
-          {/* Theme toggle */}
-          <Button variant="ghost" size="sm" onClick={() => toggleTheme()}>
-            {theme === "light" ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-          </Button>
         </div>
 
         {/* Mobile Menu Button */}
@@ -273,18 +254,6 @@ export default function Header() {
                   </Link>
                 </div>
               )}
-
-              {/* Mobile theme toggle */}
-              <button
-                onClick={() => toggleTheme()}
-                className="border bg-green-700  dark:bg-white px-4 py-2 rounded-sm shadow-sm"
-              >
-                {theme === "light" ? (
-                  <Sun className=" text-white dark:text-black h-6 w-6" />
-                ) : (
-                  <Moon className=" text-black h-6 w-6" />
-                )}
-              </button>
             </div>
           </div>
         </>

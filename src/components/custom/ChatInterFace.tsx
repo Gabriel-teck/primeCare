@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -17,34 +18,49 @@ import { Message } from "@/types/chat";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 
+type ConversationMessage = {
+  content?: string;
+};
+
+type Conversation = {
+  id: string;
+  messages?: ConversationMessage[];
+};
+
+type IncomingChatMessage = {
+  id: string;
+  content: string;
+  sender: string;
+  createdAt: string;
+};
+
+type ApiChatMessage = {
+  id: string;
+  content: string;
+  sender: string;
+  createdAt: string;
+};
+
 export default function ChatInterface() {
-  const { user, token } = useAuth();
-  const { socket, isConnected } = useSocket();
+  const { token } = useAuth();
+  const { socket } = useSocket();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [currentConversation, setCurrentConversation] = useState<any | null>(
-    null
-  );
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversation, setCurrentConversation] =
+    useState<Conversation | null>(null);
   const [inputText, setInputText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isTyping, setIsTyping] = useState(false);
+  const [, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load conversations on mount
-  useEffect(() => {
-    if (token) {
-      loadConversations();
-    }
-  }, [token]);
-
   // Socket event listeners
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("receiveMessage", (message: any) => {
+    socket.on("receiveMessage", (message: IncomingChatMessage) => {
       console.log("Received message:", message);
       setMessages((prev) => [
         ...prev,
@@ -58,7 +74,7 @@ export default function ChatInterface() {
       ]);
     });
 
-    socket.on("userTyping", (data: any) => {
+    socket.on("userTyping", (data: { isTyping: boolean }) => {
       setIsTyping(data.isTyping);
     });
 
@@ -69,64 +85,73 @@ export default function ChatInterface() {
   }, [socket]);
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const loadMessages = useCallback(
+    async (conversationId: string) => {
+      if (!token) return;
 
-  const loadConversations = async () => {
-    if (!token) return;
+      try {
+        setIsLoading(true);
+        console.log("Loading messages for conversation:", conversationId);
 
-    try {
-      setIsLoading(true);
-      setError(null);
-      console.log(
-        "Loading conversations with token:",
-        token.substring(0, 20) + "..."
-      );
-
-      const response = await fetch("http://localhost:3001/chat/conversations", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      console.log("Conversations response status:", response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Conversations response error:", errorText);
-        throw new Error(
-          `Failed to load conversations: ${response.status} - ${errorText}`
+        const response = await fetch(
+          `http://localhost:3001/chat/conversations/${conversationId}/messages`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
         );
+
+        console.log("Messages response status:", response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Messages response error:", errorText);
+          throw new Error(
+            `Failed to load messages: ${response.status} - ${errorText}`,
+          );
+        }
+
+        const data: ApiChatMessage[] = await response.json();
+        console.log("Loaded messages:", data);
+        const formattedMessages: Message[] = data.map((msg) => ({
+          id: msg.id,
+          text: msg.content,
+          sender: msg.sender === "admin" ? "doctor" : "user",
+          timestamp: new Date(msg.createdAt),
+          type: "text",
+        }));
+        setMessages(formattedMessages);
+
+        if (socket) {
+          socket.emit("joinConversation", { conversationId });
+          console.log("Joined conversation room:", conversationId);
+        }
+      } catch (error) {
+        console.error("Failed to load messages:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to load messages",
+        );
+      } finally {
+        setIsLoading(false);
       }
+    },
+    [token, socket],
+  );
 
-      const data = await response.json();
-      console.log("Loaded conversations:", data);
-      setConversations(data);
+  const handleConversationSelect = useCallback(
+    (conversation: Conversation) => {
+      console.log("Selected conversation:", conversation);
+      setCurrentConversation(conversation);
+      void loadMessages(conversation.id);
+    },
+    [loadMessages],
+  );
 
-      // If there are conversations, select the first one
-      if (data.length > 0) {
-        handleConversationSelect(data[0]);
-      } else {
-        // Create a new conversation if none exists
-        await createNewConversation();
-      }
-    } catch (error) {
-      console.error("Failed to load conversations:", error);
-      setError(
-        error instanceof Error ? error.message : "Failed to load conversations"
-      );
-      // Try to create a new conversation even if loading fails
-      await createNewConversation();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const createNewConversation = async () => {
+  const createNewConversation = useCallback(async () => {
     if (!token) return;
 
     try {
@@ -148,17 +173,16 @@ export default function ChatInterface() {
         const errorText = await response.text();
         console.error("Create conversation error:", errorText);
         throw new Error(
-          `Failed to create conversation: ${response.status} - ${errorText}`
+          `Failed to create conversation: ${response.status} - ${errorText}`,
         );
       }
 
-      const conversation = await response.json();
+      const conversation: Conversation = await response.json();
       console.log("Created conversation:", conversation);
 
       setCurrentConversation(conversation);
       setConversations([conversation]);
 
-      // Join the conversation room
       if (socket) {
         socket.emit("joinConversation", { conversationId: conversation.id });
         console.log("Joined conversation room:", conversation.id);
@@ -166,62 +190,65 @@ export default function ChatInterface() {
     } catch (error) {
       console.error("Failed to create conversation:", error);
       setError(
-        error instanceof Error ? error.message : "Failed to create conversation"
+        error instanceof Error
+          ? error.message
+          : "Failed to create conversation",
       );
     }
-  };
+  }, [token, socket]);
 
-  const loadMessages = async (conversationId: string) => {
+  const loadConversations = useCallback(async () => {
     if (!token) return;
 
     try {
       setIsLoading(true);
-      console.log("Loading messages for conversation:", conversationId);
-
-      const response = await fetch(
-        `http://localhost:3001/chat/conversations/${conversationId}/messages`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      setError(null);
+      console.log(
+        "Loading conversations with token:",
+        token.substring(0, 20) + "...",
       );
 
-      console.log("Messages response status:", response.status);
+      const response = await fetch("http://localhost:3001/chat/conversations", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log("Conversations response status:", response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Messages response error:", errorText);
+        console.error("Conversations response error:", errorText);
         throw new Error(
-          `Failed to load messages: ${response.status} - ${errorText}`
+          `Failed to load conversations: ${response.status} - ${errorText}`,
         );
       }
 
-      const data = await response.json();
-      console.log("Loaded messages:", data);
-      const formattedMessages: Message[] = data.map((msg: any) => ({
-        id: msg.id,
-        text: msg.content,
-        sender: msg.sender === "admin" ? "doctor" : "user",
-        timestamp: new Date(msg.createdAt),
-        type: "text",
-      }));
-      setMessages(formattedMessages);
+      const data: Conversation[] = await response.json();
+      console.log("Loaded conversations:", data);
+      setConversations(data);
 
-      // Join conversation room
-      if (socket) {
-        socket.emit("joinConversation", { conversationId });
-        console.log("Joined conversation room:", conversationId);
+      if (data.length > 0) {
+        handleConversationSelect(data[0]);
+      } else {
+        await createNewConversation();
       }
     } catch (error) {
-      console.error("Failed to load messages:", error);
+      console.error("Failed to load conversations:", error);
       setError(
-        error instanceof Error ? error.message : "Failed to load messages"
+        error instanceof Error ? error.message : "Failed to load conversations",
       );
+      await createNewConversation();
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token, handleConversationSelect, createNewConversation]);
+
+  useEffect(() => {
+    if (token) {
+      void loadConversations();
+    }
+  }, [token, loadConversations]);
 
   const sendMessage = async (content: string) => {
     if (!currentConversation) {
@@ -246,10 +273,8 @@ export default function ChatInterface() {
       type: "text",
     };
 
-    // Optimistically add message
     setMessages((prev) => [...prev, newMessage]);
 
-    // Send via socket
     socket.emit("sendMessage", {
       conversationId: currentConversation.id,
       content: content,
@@ -262,7 +287,7 @@ export default function ChatInterface() {
     if (!inputText.trim() && !selectedFile) return;
 
     console.log("Handling send message:", inputText);
-    sendMessage(inputText);
+    void sendMessage(inputText);
     setInputText("");
     setSelectedFile(null);
   };
@@ -279,12 +304,6 @@ export default function ChatInterface() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  };
-
-  const handleConversationSelect = (conversation: any) => {
-    console.log("Selected conversation:", conversation);
-    setCurrentConversation(conversation);
-    loadMessages(conversation.id);
   };
 
   const handleCall = () => {
@@ -363,10 +382,12 @@ export default function ChatInterface() {
                       Dr. Gabriel Udoh
                     </h4>
                     <p className="text-sm text-gray-500">
-                      {conversation.messages?.length > 0
-                        ? conversation.messages[
-                            conversation.messages.length - 1
-                          ].content.substring(0, 30) + "..."
+                      {(conversation.messages?.length ?? 0) > 0
+                        ? (
+                            conversation.messages?.[
+                              (conversation.messages?.length ?? 1) - 1
+                            ]?.content ?? ""
+                          ).substring(0, 30) + "..."
                         : "No messages yet"}
                     </p>
                   </div>
@@ -434,12 +455,15 @@ export default function ChatInterface() {
                   }`}
                 >
                   {message.type === "text" && <p>{message.text}</p>}
-                  {message.type === "image" && (
+                  {message.type === "image" && message.fileUrl && (
                     <div>
-                      <img
+                      <Image
                         src={message.fileUrl}
                         alt="Shared image"
+                        width={320}
+                        height={240}
                         className="max-w-full h-auto rounded"
+                        unoptimized
                       />
                       <p className="text-xs mt-1 opacity-75">
                         {message.fileName}

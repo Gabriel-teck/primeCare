@@ -17,7 +17,6 @@ import {
   Download,
 } from "lucide-react";
 
-
 type Consultation = {
   id: string;
   fullName: string;
@@ -84,10 +83,10 @@ export default function ConsultationHistory() {
     try {
       await cancelConsultation(id, token);
       setConsultations((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, status: "cancelled" } : c))
+        prev.map((c) => (c.id === id ? { ...c, status: "cancelled" } : c)),
       );
-    } catch (err: any) {
-      setError(err.message || "Cancel failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Cancel failed");
     } finally {
       setActionLoading(null);
     }
@@ -103,7 +102,7 @@ export default function ConsultationHistory() {
         id,
         rescheduleForm.date,
         rescheduleForm.time,
-        token
+        token,
       );
       setConsultations((prev) =>
         prev.map((c) =>
@@ -116,13 +115,13 @@ export default function ConsultationHistory() {
                   time: rescheduleForm.time,
                 },
               }
-            : c
-        )
+            : c,
+        ),
       );
       setRescheduleId(null);
       setRescheduleForm({ date: "", time: "" });
-    } catch (err: any) {
-      setError(err.message || "Reschedule failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Reschedule failed");
     } finally {
       setActionLoading(null);
     }

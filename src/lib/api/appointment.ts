@@ -1,6 +1,20 @@
 const API_BASE_URL = "http://localhost:3001";
 
-export async function bookAppointment(data: any, token: string) {
+export type AppointmentPayload = {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  appointmentType: string;
+  date: string;
+  time: string;
+  reason: string;
+};
+
+export async function bookAppointment(
+  data: AppointmentPayload,
+  token: string | null,
+) {
+  if (!token) throw new Error("Not authenticated");
   const res = await fetch(`${API_BASE_URL}/appointment`, {
     method: "POST",
     headers: {
@@ -13,7 +27,8 @@ export async function bookAppointment(data: any, token: string) {
   return res.json();
 }
 
-export async function getMyAppointments(token: string) {
+export async function getMyAppointments(token: string | null) {
+  if (!token) throw new Error("Not authenticated");
   const res = await fetch(`${API_BASE_URL}/appointment/my`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -25,8 +40,9 @@ export async function rescheduleAppointment(
   id: string,
   date: string,
   time: string,
-  token: string
+  token: string | null,
 ) {
+  if (!token) throw new Error("Not authenticated");
   const res = await fetch(`${API_BASE_URL}/appointment/rescheduled/${id}`, {
     method: "PATCH",
     headers: {
@@ -39,7 +55,8 @@ export async function rescheduleAppointment(
   return res.json();
 }
 
-export async function cancelAppointment(id: string, token: string) {
+export async function cancelAppointment(id: string, token: string | null) {
+  if (!token) throw new Error("Not authenticated");
   const res = await fetch(`http://localhost:3001/appointment/cancel/${id}`, {
     method: "PATCH",
     headers: {
@@ -52,7 +69,8 @@ export async function cancelAppointment(id: string, token: string) {
 }
 
 //for admin
-export async function getAllAppointments(token: string) {
+export async function getAllAppointments(token: string | null) {
+  if (!token) throw new Error("Not authenticated");
   const res = await fetch(`${API_BASE_URL}/appointment`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -60,7 +78,12 @@ export async function getAllAppointments(token: string) {
   return res.json();
 }
 
-export async function updateAppointment(id: string, data: any, token: string) {
+export async function updateAppointment(
+  id: string,
+  data: Record<string, unknown>,
+  token: string | null,
+) {
+  if (!token) throw new Error("Not authenticated");
   const res = await fetch(`${API_BASE_URL}/appointment/${id}`, {
     method: "PATCH",
     headers: {
