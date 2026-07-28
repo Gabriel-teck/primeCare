@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function LegacySettingRedirect() {
+export default function LegacySettingsRedirect() {
   redirect("/admin-dashboard/settings");
 }

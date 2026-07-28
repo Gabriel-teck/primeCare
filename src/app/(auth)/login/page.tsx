@@ -39,11 +39,16 @@ export default function Login() {
     setError("");
 
     try {
-      // Use the AuthContext login function which handles the API call
-      await authLogin(data.email, data.password);
+      const loggedInUser = await authLogin(data.email, data.password);
 
-      // Redirect to dashboard or home page on success
-      router.push("/");
+      if (
+        loggedInUser.role === "admin" ||
+        loggedInUser.role === "super_admin"
+      ) {
+        router.push("/admin-dashboard");
+      } else {
+        router.push("/patient-dashboard");
+      }
     } catch (err: unknown) {
       setError(
         err instanceof Error
