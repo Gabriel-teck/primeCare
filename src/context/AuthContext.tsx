@@ -17,11 +17,15 @@ type AuthContextType = {
   ready: boolean;
   login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
+  enterPreviewAdmin: () => void;
+  enterPreviewDoctor: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const PREVIEW_TOKEN = "preview-admin-token";
+export const DOCTOR_PREVIEW_TOKEN = "preview-doctor-token";
+
 export const PREVIEW_ADMIN: AuthUser = {
   id: "preview-admin",
   email: "admin@primecare.health",
@@ -29,28 +33,68 @@ export const PREVIEW_ADMIN: AuthUser = {
   role: "super_admin",
 };
 
-const PREVIEW_ENABLED = process.env.NEXT_PUBLIC_ADMIN_PREVIEW === "true";
+export const PREVIEW_DOCTOR: AuthUser = {
+  id: "doc-1",
+  email: "ada.okonkwo@primecare.health",
+  fullName: "Dr. Ada Okonkwo",
+  role: "doctor",
+};
 
-function isAdminRole(role?: string) {
+const ADMIN_PREVIEW = process.env.NEXT_PUBLIC_ADMIN_PREVIEW === "true";
+const DOCTOR_PREVIEW = process.env.NEXT_PUBLIC_DOCTOR_PREVIEW === "true";
+
+export function isAdminRole(role?: string) {
   return role === "admin" || role === "super_admin";
 }
 
+function dashboardForRole(role: string) {
+  if (isAdminRole(role)) return "/admin-dashboard";
+  if (role === "doctor") return "/doctor-dashboard";
+  return "/patient-dashboard";
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(
-    PREVIEW_ENABLED ? PREVIEW_ADMIN : null,
-  );
-  const [token, setToken] = useState<string | null>(
-    PREVIEW_ENABLED ? PREVIEW_TOKEN : null,
-  );
-  const [ready, setReady] = useState(PREVIEW_ENABLED);
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    if (ADMIN_PREVIEW) return PREVIEW_ADMIN;
+    if (DOCTOR_PREVIEW) return PREVIEW_DOCTOR;
+    return null;
+  });
+  const [token, setToken] = useState<string | null>(() => {
+    if (ADMIN_PREVIEW) return PREVIEW_TOKEN;
+    if (DOCTOR_PREVIEW) return DOCTOR_PREVIEW_TOKEN;
+    return null;
+  });
+  const [ready, setReady] = useState(ADMIN_PREVIEW || DOCTOR_PREVIEW);
+
+  const enterPreviewAdmin = () => {
+    if (!ADMIN_PREVIEW) return;
+    setToken(PREVIEW_TOKEN);
+    setUser(PREVIEW_ADMIN);
+  };
+
+  const enterPreviewDoctor = () => {
+    if (!DOCTOR_PREVIEW) return;
+    setToken(DOCTOR_PREVIEW_TOKEN);
+    setUser(PREVIEW_DOCTOR);
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem("token");
 
-    if (!stored || stored === PREVIEW_TOKEN) {
-      if (PREVIEW_ENABLED) {
+    if (
+      !stored ||
+      stored === PREVIEW_TOKEN ||
+      stored === DOCTOR_PREVIEW_TOKEN
+    ) {
+      if (stored === DOCTOR_PREVIEW_TOKEN && DOCTOR_PREVIEW) {
+        setToken(DOCTOR_PREVIEW_TOKEN);
+        setUser(PREVIEW_DOCTOR);
+      } else if (ADMIN_PREVIEW) {
         setToken(PREVIEW_TOKEN);
         setUser(PREVIEW_ADMIN);
+      } else if (DOCTOR_PREVIEW) {
+        setToken(DOCTOR_PREVIEW_TOKEN);
+        setUser(PREVIEW_DOCTOR);
       }
       setReady(true);
       return;
@@ -59,8 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     userApi
       .getUser(stored)
       .then((nextUser) => {
-        if (PREVIEW_ENABLED && !isAdminRole(nextUser.role)) {
-          // Keep preview admin so the dashboard stays accessible for UI review.
+        if (ADMIN_PREVIEW && !isAdminRole(nextUser.role)) {
           setToken(PREVIEW_TOKEN);
           setUser(PREVIEW_ADMIN);
           return;
@@ -69,9 +112,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(nextUser);
       })
       .catch(() => {
-        if (PREVIEW_ENABLED) {
+        if (ADMIN_PREVIEW) {
           setToken(PREVIEW_TOKEN);
           setUser(PREVIEW_ADMIN);
+        } else if (DOCTOR_PREVIEW) {
+          setToken(DOCTOR_PREVIEW_TOKEN);
+          setUser(PREVIEW_DOCTOR);
         } else {
           setToken(null);
           setUser(null);
@@ -91,9 +137,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem("token");
-    if (PREVIEW_ENABLED) {
+    if (ADMIN_PREVIEW) {
       setToken(PREVIEW_TOKEN);
       setUser(PREVIEW_ADMIN);
+      return;
+    }
+    if (DOCTOR_PREVIEW) {
+      setToken(DOCTOR_PREVIEW_TOKEN);
+      setUser(PREVIEW_DOCTOR);
       return;
     }
     setToken(null);
@@ -101,7 +152,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, ready, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        ready,
+        login,
+        logout,
+        enterPreviewAdmin,
+        enterPreviewDoctor,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -114,3 +175,5 @@ export function useAuth() {
   }
   return context;
 }
+
+export { dashboardForRole };
