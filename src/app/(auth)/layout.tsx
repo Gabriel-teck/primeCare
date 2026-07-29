@@ -4,6 +4,7 @@ import "../globals.css";
 import Header from "@/components/landing-component/Header";
 import { AuthProvider } from "@/context/AuthContext";
 import { NavigationProgress } from "@/components/NavigationProgress";
+import { Toaster } from "@/components/ui/sonner";
 
 const gabarito = Gabarito({
   subsets: ["latin"],
@@ -27,6 +28,7 @@ export default function AuthLayout({
           <NavigationProgress />
           <Header />
           {children}
+          <Toaster />
         </AuthProvider>
       </body>
     </html>

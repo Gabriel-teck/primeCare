@@ -3,32 +3,33 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { AuthLoadingScreen } from "@/components/auth/AuthLoadingScreen";
 
 export function PatientGuard({ children }: { children: React.ReactNode }) {
-  const { token, ready } = useAuth();
+  const { user, token, ready } = useAuth();
   const router = useRouter();
+
+  const isPatient = user?.role === "patient";
 
   useEffect(() => {
     if (!ready) return;
+
     if (!token) {
       router.replace("/login");
+      return;
     }
-  }, [ready, token, router]);
 
-  if (!ready) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-gray-600">
-        Checking access...
-      </div>
-    );
-  }
+    if (user && !isPatient) {
+      if (user.role === "doctor") {
+        router.replace("/doctor-dashboard");
+      } else {
+        router.replace("/admin-dashboard");
+      }
+    }
+  }, [ready, token, user, isPatient, router]);
 
-  if (!token) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-gray-600">
-        Redirecting to login...
-      </div>
-    );
+  if (!ready || !token || (user && !isPatient)) {
+    return <AuthLoadingScreen />;
   }
 
   return <>{children}</>;

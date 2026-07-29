@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, isAdminRole } from "@/context/AuthContext";
+import { AuthLoadingScreen } from "@/components/auth/AuthLoadingScreen";
 
 export function DoctorGuard({ children }: { children: React.ReactNode }) {
   const { user, token, ready } = useAuth();
@@ -27,28 +28,8 @@ export function DoctorGuard({ children }: { children: React.ReactNode }) {
     }
   }, [ready, token, user, isDoctor, router]);
 
-  if (!ready) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-gray-600">
-        Checking access...
-      </div>
-    );
-  }
-
-  if (!token) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-gray-600">
-        Redirecting to login...
-      </div>
-    );
-  }
-
-  if (user && !isDoctor) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-gray-600">
-        Redirecting...
-      </div>
-    );
+  if (!ready || !token || (user && !isDoctor)) {
+    return <AuthLoadingScreen />;
   }
 
   return <>{children}</>;
