@@ -17,31 +17,9 @@ type AuthContextType = {
   ready: boolean;
   login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
-  enterPreviewAdmin: () => void;
-  enterPreviewDoctor: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
-
-export const PREVIEW_TOKEN = "preview-admin-token";
-export const DOCTOR_PREVIEW_TOKEN = "preview-doctor-token";
-
-export const PREVIEW_ADMIN: AuthUser = {
-  id: "preview-admin",
-  email: "admin@primecare.health",
-  fullName: "PrimeCare Admin",
-  role: "super_admin",
-};
-
-export const PREVIEW_DOCTOR: AuthUser = {
-  id: "doc-1",
-  email: "ada.okonkwo@primecare.health",
-  fullName: "Dr. Ada Okonkwo",
-  role: "doctor",
-};
-
-const ADMIN_PREVIEW = process.env.NEXT_PUBLIC_ADMIN_PREVIEW === "true";
-const DOCTOR_PREVIEW = process.env.NEXT_PUBLIC_DOCTOR_PREVIEW === "true";
 
 export function isAdminRole(role?: string) {
   return role === "admin" || role === "super_admin";
@@ -54,48 +32,14 @@ function dashboardForRole(role: string) {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    if (ADMIN_PREVIEW) return PREVIEW_ADMIN;
-    if (DOCTOR_PREVIEW) return PREVIEW_DOCTOR;
-    return null;
-  });
-  const [token, setToken] = useState<string | null>(() => {
-    if (ADMIN_PREVIEW) return PREVIEW_TOKEN;
-    if (DOCTOR_PREVIEW) return DOCTOR_PREVIEW_TOKEN;
-    return null;
-  });
-  const [ready, setReady] = useState(ADMIN_PREVIEW || DOCTOR_PREVIEW);
-
-  const enterPreviewAdmin = () => {
-    if (!ADMIN_PREVIEW) return;
-    setToken(PREVIEW_TOKEN);
-    setUser(PREVIEW_ADMIN);
-  };
-
-  const enterPreviewDoctor = () => {
-    if (!DOCTOR_PREVIEW) return;
-    setToken(DOCTOR_PREVIEW_TOKEN);
-    setUser(PREVIEW_DOCTOR);
-  };
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("token");
 
-    if (
-      !stored ||
-      stored === PREVIEW_TOKEN ||
-      stored === DOCTOR_PREVIEW_TOKEN
-    ) {
-      if (stored === DOCTOR_PREVIEW_TOKEN && DOCTOR_PREVIEW) {
-        setToken(DOCTOR_PREVIEW_TOKEN);
-        setUser(PREVIEW_DOCTOR);
-      } else if (ADMIN_PREVIEW) {
-        setToken(PREVIEW_TOKEN);
-        setUser(PREVIEW_ADMIN);
-      } else if (DOCTOR_PREVIEW) {
-        setToken(DOCTOR_PREVIEW_TOKEN);
-        setUser(PREVIEW_DOCTOR);
-      }
+    if (!stored) {
       setReady(true);
       return;
     }
@@ -103,25 +47,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     userApi
       .getUser(stored)
       .then((nextUser) => {
-        if (ADMIN_PREVIEW && !isAdminRole(nextUser.role)) {
-          setToken(PREVIEW_TOKEN);
-          setUser(PREVIEW_ADMIN);
-          return;
-        }
         setToken(stored);
         setUser(nextUser);
       })
       .catch(() => {
-        if (ADMIN_PREVIEW) {
-          setToken(PREVIEW_TOKEN);
-          setUser(PREVIEW_ADMIN);
-        } else if (DOCTOR_PREVIEW) {
-          setToken(DOCTOR_PREVIEW_TOKEN);
-          setUser(PREVIEW_DOCTOR);
-        } else {
-          setToken(null);
-          setUser(null);
-        }
+        localStorage.removeItem("token");
+        setToken(null);
+        setUser(null);
       })
       .finally(() => setReady(true));
   }, []);
@@ -137,16 +69,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem("token");
-    if (ADMIN_PREVIEW) {
-      setToken(PREVIEW_TOKEN);
-      setUser(PREVIEW_ADMIN);
-      return;
-    }
-    if (DOCTOR_PREVIEW) {
-      setToken(DOCTOR_PREVIEW_TOKEN);
-      setUser(PREVIEW_DOCTOR);
-      return;
-    }
     setToken(null);
     setUser(null);
   };
@@ -159,8 +81,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ready,
         login,
         logout,
-        enterPreviewAdmin,
-        enterPreviewDoctor,
       }}
     >
       {children}

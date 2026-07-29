@@ -49,26 +49,26 @@ function AdminBookingsContent() {
         getAllConsultations(token),
       ]);
       const mapped: AdminBooking[] = [
-        ...(appts || []).map((a: Record<string, string>) => ({
+        ...(appts || []).map((a) => ({
           id: a.id,
           fullName: a.fullName,
           email: a.email,
           phoneNumber: a.phoneNumber,
           date: a.date,
           time: a.time,
-          status: a.status,
+          status: String(a.status),
           reason: a.reason,
           kind: "appointment" as const,
           typeLabel: a.appointmentType || "appointment",
         })),
-        ...(consults || []).map((c: Record<string, string>) => ({
+        ...(consults || []).map((c) => ({
           id: c.id,
           fullName: c.fullName,
           email: c.email,
           phoneNumber: c.phoneNumber,
           date: c.date,
           time: c.time,
-          status: c.status,
+          status: String(c.status),
           reason: c.reason,
           kind: "consultation" as const,
           typeLabel: c.consultationType || "consultation",

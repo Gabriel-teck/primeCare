@@ -67,7 +67,7 @@ export default function Home() {
 
             {/* Hero Image */}
             <div className="order-2 md:order-2 w-full md:w-1/2 max-w-[600px]">
-              <Link href="">
+              <Link href="#care-service">
                 <Image
                   src={first_medic}
                   alt="Medic-1"
@@ -133,10 +133,7 @@ export default function Home() {
         </section>
 
         {/* Urgent care */}
-        <section
-          id="care-service"
-          className="w-full mt-[60px] px-[20px] scroll-mt-24 md:scroll-mt-28"
-        >
+        <section className="w-full mt-[60px] px-[20px] scroll-mt-24 md:scroll-mt-28">
           <div className="container mx-auto flex flex-col md:flex-row md:justify-between p-[30px] md:p-[35px] sm:px-6 lg:px-8 bg-[linear-gradient(135deg,_#1d884a,_#9fd6b6)] rounded-[20px]">
             <div className="max-w-xl flex flex-col items-center md:items-start text-white">
               <h3 className="tracking-normal text-[36px] font-bold mb-[30px]">
@@ -161,7 +158,7 @@ export default function Home() {
         </section>
 
         {/* Need An Urgent Care Section */}
-        <section className="w-[100%] mt-[10rem]">
+        <section id="care-service" className="w-[100%] mt-[10rem]">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col mx-auto md:w-[80%] items-center">
               <h1 className="text-[rgb(51, 51, 51)] text-[32px] font-semibold tracking-normal">
