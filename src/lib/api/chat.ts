@@ -1,14 +1,32 @@
-const API_BASE_URL = "http://localhost:3001";
+import { api } from "./client";
+import type {
+  ChatMessage,
+  Conversation,
+  CreateConversationPayload,
+  SendMessagePayload,
+  UnreadCountResponse,
+} from "@/types";
+
+export async function listConversations(token: string | null) {
+  return api.get<Conversation[]>("/chat/conversations", { token, auth: true });
+}
 
 export async function getMessages(conversationId: string, token: string) {
-  const res = await fetch(
-    `${API_BASE_URL}/chat/conversations/${conversationId}/messages`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    },
+  return api.get<ChatMessage[]>(
+    `/chat/conversations/${conversationId}/messages`,
+    { token, auth: true },
   );
-  if (!res.ok) throw new Error("Failed to fetch");
-  return res.json();
+}
+
+export async function createConversation(
+  payload: CreateConversationPayload,
+  token: string | null,
+) {
+  return api.post<{ id: string; type: string }>(
+    "/chat/conversations",
+    payload,
+    { token, auth: true },
+  );
 }
 
 export async function sendMessage(
@@ -16,14 +34,10 @@ export async function sendMessage(
   content: string,
   token: string,
 ) {
-  const res = await fetch(`${API_BASE_URL}/chat/send`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ conversationId, content }),
-  });
-  if (!res.ok) throw new Error("Send failed");
-  return res.json();
+  const payload: SendMessagePayload = { conversationId, content };
+  return api.post<ChatMessage>("/chat/send", payload, { token, auth: true });
+}
+
+export async function getUnreadCount(token: string | null) {
+  return api.get<UnreadCountResponse>("/chat/unread", { token, auth: true });
 }

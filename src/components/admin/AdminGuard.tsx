@@ -2,42 +2,30 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, PREVIEW_TOKEN, isAdminRole } from "@/context/AuthContext";
-
-const PREVIEW_ENABLED = process.env.NEXT_PUBLIC_ADMIN_PREVIEW === "true";
+import { useAuth, isAdminRole } from "@/context/AuthContext";
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
-  const { user, token, ready, enterPreviewAdmin } = useAuth();
+  const { user, token, ready } = useAuth();
   const router = useRouter();
 
-  const isPreviewSession = PREVIEW_ENABLED && token === PREVIEW_TOKEN;
-  const isAdmin = isPreviewSession || isAdminRole(user?.role);
+  const isAdmin = isAdminRole(user?.role);
 
   useEffect(() => {
     if (!ready) return;
 
-    if (
-      PREVIEW_ENABLED &&
-      user?.role !== "admin" &&
-      user?.role !== "super_admin"
-    ) {
-      enterPreviewAdmin();
-      return;
-    }
-
-    if (!token && !PREVIEW_ENABLED) {
+    if (!token) {
       router.replace("/login");
       return;
     }
 
-    if (token && user && !isAdmin) {
+    if (user && !isAdmin) {
       if (user.role === "doctor") {
         router.replace("/doctor-dashboard");
       } else {
         router.replace("/patient-dashboard");
       }
     }
-  }, [ready, token, user, isAdmin, router, enterPreviewAdmin]);
+  }, [ready, token, user, isAdmin, router]);
 
   if (!ready) {
     return (
@@ -47,7 +35,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!token && !PREVIEW_ENABLED) {
+  if (!token) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-sm text-gray-600">
         Redirecting to login...
@@ -56,13 +44,6 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (user && !isAdmin) {
-    if (PREVIEW_ENABLED) {
-      return (
-        <div className="flex min-h-[50vh] items-center justify-center text-sm text-gray-600">
-          Loading admin preview...
-        </div>
-      );
-    }
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-sm text-gray-600">
         Redirecting...

@@ -47,26 +47,22 @@ export default function AdminOverviewPage() {
           getAllConsultations(token),
         ]);
         const mapped: BookingRow[] = [
-          ...(appts || []).map(
-            (a: BookingRow & { appointmentType?: string }) => ({
-              id: a.id,
-              fullName: a.fullName,
-              date: a.date,
-              time: a.time,
-              status: a.status,
-              kind: "appointment" as const,
-            }),
-          ),
-          ...(consults || []).map(
-            (c: BookingRow & { consultationType?: string }) => ({
-              id: c.id,
-              fullName: c.fullName,
-              date: c.date,
-              time: c.time,
-              status: c.status,
-              kind: "consultation" as const,
-            }),
-          ),
+          ...(appts || []).map((a) => ({
+            id: a.id,
+            fullName: a.fullName,
+            date: a.date,
+            time: a.time,
+            status: String(a.status),
+            kind: "appointment" as const,
+          })),
+          ...(consults || []).map((c) => ({
+            id: c.id,
+            fullName: c.fullName,
+            date: c.date,
+            time: c.time,
+            status: String(c.status),
+            kind: "consultation" as const,
+          })),
         ];
         setRows(mapped);
       } catch {
