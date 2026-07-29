@@ -13,6 +13,10 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { getAllAppointments } from "@/lib/api/appointment";
 import { getAllConsultations } from "@/lib/api/consultation";
+import { getUnreadCount } from "@/lib/api/chat";
+import { listPayments } from "@/lib/api/payments";
+import { listStaff } from "@/lib/api/staff";
+import { getAllPatients } from "@/lib/api/user";
 import {
   AdminPageHeader,
   AdminSectionCard,
@@ -20,8 +24,6 @@ import {
   AdminStatusBadge,
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
-import { mockDoctorThreads, mockPayments } from "@/lib/admin/mock-data";
-import { getActiveDoctors } from "@/lib/admin/mock-staff";
 
 type BookingRow = {
   id: string;
@@ -35,6 +37,10 @@ type BookingRow = {
 export default function AdminOverviewPage() {
   const { user, token } = useAuth();
   const [rows, setRows] = useState<BookingRow[]>([]);
+  const [unreadDoctorDms, setUnreadDoctorDms] = useState(0);
+  const [failedPayments, setFailedPayments] = useState(0);
+  const [activeDoctors, setActiveDoctors] = useState(0);
+  const [patientCount, setPatientCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,10 +48,16 @@ export default function AdminOverviewPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [appts, consults] = await Promise.all([
-          getAllAppointments(token),
-          getAllConsultations(token),
-        ]);
+        const [appts, consults, unread, failed, doctors, patients] =
+          await Promise.all([
+            getAllAppointments(token),
+            getAllConsultations(token),
+            getUnreadCount(token),
+            listPayments(token, "failed"),
+            listStaff(token, "doctor"),
+            getAllPatients(token),
+          ]);
+
         const mapped: BookingRow[] = [
           ...(appts || []).map((a) => ({
             id: a.id,
@@ -65,8 +77,18 @@ export default function AdminOverviewPage() {
           })),
         ];
         setRows(mapped);
+        setUnreadDoctorDms(unread?.count ?? 0);
+        setFailedPayments((failed || []).length);
+        setActiveDoctors(
+          (doctors || []).filter((d) => d.active !== false).length,
+        );
+        setPatientCount((patients || []).length);
       } catch {
         setRows([]);
+        setUnreadDoctorDms(0);
+        setFailedPayments(0);
+        setActiveDoctors(0);
+        setPatientCount(0);
       } finally {
         setLoading(false);
       }
@@ -79,16 +101,6 @@ export default function AdminOverviewPage() {
   const todayRows = rows
     .filter((r) => r.date === today)
     .sort((a, b) => a.time.localeCompare(b.time));
-  const uniquePatients = new Set(rows.map((r) => r.fullName)).size;
-  const unreadDoctorDms = mockDoctorThreads.reduce(
-    (sum, t) =>
-      sum +
-      t.messages.filter((m) => !m.read && m.senderRole === "doctor").length,
-    0,
-  );
-  const failedPayments = mockPayments.filter(
-    (p) => p.status === "failed",
-  ).length;
   const completedRate = useMemo(() => {
     if (!rows.length) return "—";
     const done = rows.filter((r) => r.status === "completed").length;
@@ -117,13 +129,13 @@ export default function AdminOverviewPage() {
         />
         <AdminStatCard
           label="Unread doctor DMs"
-          value={unreadDoctorDms}
-          hint={`${getActiveDoctors().length} active doctors`}
+          value={loading ? "…" : unreadDoctorDms}
+          hint={`${activeDoctors} active doctors`}
           icon={MessageSquare}
         />
         <AdminStatCard
           label="Failed payments"
-          value={failedPayments}
+          value={loading ? "…" : failedPayments}
           hint={`Completion rate ${completedRate}`}
           icon={CreditCard}
         />
@@ -154,7 +166,7 @@ export default function AdminOverviewPage() {
             <QueueLink
               href="/admin-dashboard/patients"
               label="Patient directory"
-              count={uniquePatients}
+              count={patientCount}
             />
           </div>
         </AdminSectionCard>
@@ -241,10 +253,10 @@ function QueueLink({
   return (
     <Link
       href={href}
-      className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 transition-colors hover:border-green-700 hover:bg-green-50"
+      className="flex items-center justify-between rounded-lg border-[0.5] border-gray-200 px-3 py-2.5 transition-colors hover:bg-green-50"
     >
       <span className="text-sm text-[#212529]">{label}</span>
-      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+      <span className="px-2 py-0.5 text-xs font-semibold text-green-700">
         {count}
       </span>
     </Link>
@@ -263,9 +275,9 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-colors hover:border-green-700 hover:bg-green-50"
+      className="flex items-center gap-3 rounded-xl border-[0.5] border-gray-200 bg-white p-4 transition-colors hover:bg-green-50"
     >
-      <div className="rounded-lg bg-green-50 p-2 text-green-700">
+      <div className=" p-2 text-green-700">
         <Icon className="h-5 w-5" />
       </div>
       <span className="font-medium text-[#212529]">{label}</span>

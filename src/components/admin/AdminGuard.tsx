@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, isAdminRole } from "@/context/AuthContext";
+import { AuthLoadingScreen } from "@/components/auth/AuthLoadingScreen";
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, token, ready } = useAuth();
@@ -27,28 +28,8 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     }
   }, [ready, token, user, isAdmin, router]);
 
-  if (!ready) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-gray-600">
-        Checking access...
-      </div>
-    );
-  }
-
-  if (!token) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-gray-600">
-        Redirecting to login...
-      </div>
-    );
-  }
-
-  if (user && !isAdmin) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm text-gray-600">
-        Redirecting...
-      </div>
-    );
+  if (!ready || !token || (user && !isAdmin)) {
+    return <AuthLoadingScreen />;
   }
 
   return <>{children}</>;
