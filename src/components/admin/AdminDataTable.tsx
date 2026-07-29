@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 type Column<T> = {
   key: string;
@@ -12,7 +13,8 @@ type AdminDataTableProps<T> = {
   rows: T[];
   rowKey: (row: T) => string;
   onRowClick?: (row: T) => void;
-  emptyMessage?: string;
+  emptyMessage?: React.ReactNode;
+  loading?: boolean;
   className?: string;
 };
 
@@ -22,6 +24,7 @@ export function AdminDataTable<T>({
   rowKey,
   onRowClick,
   emptyMessage = "No results found.",
+  loading = false,
   className,
 }: AdminDataTableProps<T>) {
   return (
@@ -49,7 +52,19 @@ export function AdminDataTable<T>({
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="px-4 py-10 text-center text-gray-500"
+                >
+                  <Loader2
+                    className="mx-auto h-8 w-8 animate-spin text-[#1d884a]"
+                    aria-label="Loading"
+                  />
+                </td>
+              </tr>
+            ) : rows.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length}

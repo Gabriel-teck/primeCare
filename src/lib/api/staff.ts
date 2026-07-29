@@ -5,11 +5,33 @@ import type {
   UpdateDoctorPayload,
 } from "@/types";
 
-export async function listStaff(token: string | null, role?: string) {
+export type ListStaffParams = {
+  search?: string;
+  role?: string;
+  status?: string;
+};
+
+export async function listStaff(
+  token: string | null,
+  params: ListStaffParams | string = {},
+) {
+  // Back-compat: listStaff(token, "doctor")
+  const query =
+    typeof params === "string"
+      ? { role: params }
+      : {
+          search: params.search?.trim() || undefined,
+          role: params.role && params.role !== "all" ? params.role : undefined,
+          status:
+            params.status && params.status !== "all"
+              ? params.status
+              : undefined,
+        };
+
   return api.get<StaffMember[]>("/staff", {
     token,
     auth: true,
-    query: { role },
+    query,
   });
 }
 

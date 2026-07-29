@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getAllPatients } from "@/lib/api/user";
-import { getAllAppointments } from "@/lib/api/appointment";
-import { getAllConsultations } from "@/lib/api/consultation";
+import type { PatientDirectoryItem } from "@/types";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   AdminDataTable,
   AdminFilterBar,
@@ -14,110 +14,72 @@ import {
   AdminSearchInput,
   AdminStatusBadge,
 } from "@/components/admin";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-type PatientRow = {
-  id: string;
-  fullName: string;
-  email: string;
-  createdAt?: string;
-  visits: number;
-  lastVisit: string;
-  status: "active" | "inactive" | "new";
-};
-
 export default function AdminPatientsPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
+      <AdminPatientsContent />
+    </Suspense>
+  );
+}
+
+function AdminPatientsContent() {
   const { token } = useAuth();
   const router = useRouter();
-  const [rows, setRows] = useState<PatientRow[]>([]);
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("all");
+  const searchParams = useSearchParams();
+  const [rows, setRows] = useState<PatientDirectoryItem[]>([]);
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [status, setStatus] = useState(searchParams.get("status") || "all");
   const [loading, setLoading] = useState(true);
+  const debouncedSearch = useDebouncedValue(search, 300);
+
+  const syncUrl = useCallback(
+    (next: { status: string; search: string }) => {
+      const params = new URLSearchParams();
+      if (next.status && next.status !== "all")
+        params.set("status", next.status);
+      if (next.search.trim()) params.set("search", next.search.trim());
+      const qs = params.toString();
+      router.replace(
+        qs ? `/admin-dashboard/patients?${qs}` : "/admin-dashboard/patients",
+      );
+    },
+    [router],
+  );
 
   useEffect(() => {
-    if (!token) return;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [patients, appts, consults] = await Promise.all([
-          getAllPatients(token),
-          getAllAppointments(token),
-          getAllConsultations(token),
-        ]);
-        const events = [...(appts || []), ...(consults || [])];
-        const mapped: PatientRow[] = (patients || []).map(
-          (p: {
-            id: string;
-            fullName: string;
-            email: string;
-            createdAt?: string;
-          }) => {
-            const related = events.filter(
-              (e: { email?: string }) =>
-                e.email?.toLowerCase() === p.email?.toLowerCase(),
-            );
-            const last = related
-              .map((e: { date?: string }) => e.date || "")
-              .sort()
-              .at(-1);
-            const createdRecently =
-              p.createdAt &&
-              Date.now() - new Date(p.createdAt).getTime() <
-                1000 * 60 * 60 * 24 * 30;
-            return {
-              id: p.id,
-              fullName: p.fullName,
-              email: p.email,
-              createdAt: p.createdAt,
-              visits: related.length,
-              lastVisit: last || "—",
-              status: related.length
-                ? ("active" as const)
-                : createdRecently
-                  ? ("new" as const)
-                  : ("inactive" as const),
-            };
-          },
-        );
-        setRows(mapped);
-      } catch {
-        toast.error("Failed to load patients");
-        setRows([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void load();
-  }, [token]);
+    syncUrl({ status, search: debouncedSearch });
+  }, [status, debouncedSearch, syncUrl]);
 
-  const filtered = useMemo(() => {
-    return rows.filter((row) => {
-      const q = search.toLowerCase();
-      const matchesSearch =
-        !q ||
-        row.fullName.toLowerCase().includes(q) ||
-        row.email.toLowerCase().includes(q);
-      const matchesStatus = status === "all" || row.status === status;
-      return matchesSearch && matchesStatus;
-    });
-  }, [rows, search, status]);
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const patients = await getAllPatients(token, {
+        search: debouncedSearch,
+        status,
+      });
+      setRows(patients || []);
+    } catch {
+      toast.error("Failed to load patients");
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, debouncedSearch, status]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const isFiltering = search !== debouncedSearch || loading;
 
   return (
     <div>
       <AdminPageHeader
         title="Patients"
         description="Directory of registered patients on the platform."
-        actions={
-          <Button
-            className="bg-green-700 hover:bg-green-600"
-            onClick={() =>
-              toast.message("Invite patient — coming with backend overhaul")
-            }
-          >
-            Add patient
-          </Button>
-        }
       />
 
       <AdminFilterBar>
@@ -140,9 +102,10 @@ export default function AdminPatientsPage() {
       </AdminFilterBar>
 
       <AdminDataTable
-        rows={filtered}
+        rows={rows}
         rowKey={(row) => row.id}
-        emptyMessage={loading ? "Loading patients..." : "No patients found."}
+        loading={isFiltering}
+        emptyMessage="No patients found."
         onRowClick={(row) => router.push(`/admin-dashboard/patients/${row.id}`)}
         columns={[
           {
@@ -163,7 +126,7 @@ export default function AdminPatientsPage() {
           {
             key: "last",
             header: "Last visit",
-            render: (row) => row.lastVisit,
+            render: (row) => row.lastVisit || "—",
           },
           {
             key: "status",
