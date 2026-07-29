@@ -7,6 +7,7 @@ export * from "./auth";
 export * from "./user";
 export * from "./appointment";
 export * from "./consultation";
+export * from "./bookings";
 export * from "./chat";
 export * from "./catalog";
 export * from "./payments";

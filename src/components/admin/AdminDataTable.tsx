@@ -27,7 +27,7 @@ export function AdminDataTable<T>({
   return (
     <div
       className={cn(
-        "overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm",
+        "overflow-x-auto rounded-lg border border-gray-200 bg-white",
         className,
       )}
     >
