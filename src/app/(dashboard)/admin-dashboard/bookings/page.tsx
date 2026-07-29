@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getAllAppointments, updateAppointment } from "@/lib/api/appointment";
-import {
-  getAllConsultations,
-  updateConsultation,
-} from "@/lib/api/consultation";
+import { listBookings } from "@/lib/api/bookings";
+import { updateAppointment } from "@/lib/api/appointment";
+import { updateConsultation } from "@/lib/api/consultation";
 import type { AdminBooking } from "@/lib/admin/types";
 import {
   AdminDataTable,
@@ -35,77 +33,57 @@ function AdminBookingsContent() {
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<AdminBooking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [status, setStatus] = useState(searchParams.get("status") || "all");
-  const [kind, setKind] = useState("all");
+  const [kind, setKind] = useState(searchParams.get("type") || "all");
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = async () => {
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  const syncUrl = useCallback(
+    (next: { status: string; type: string; search: string }) => {
+      const params = new URLSearchParams();
+      if (next.status && next.status !== "all")
+        params.set("status", next.status);
+      if (next.type && next.type !== "all") params.set("type", next.type);
+      if (next.search.trim()) params.set("search", next.search.trim());
+      const qs = params.toString();
+      router.replace(
+        qs ? `/admin-dashboard/bookings?${qs}` : "/admin-dashboard/bookings",
+      );
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    syncUrl({ status, type: kind, search: debouncedSearch });
+  }, [status, kind, debouncedSearch, syncUrl]);
+
+  const load = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     try {
-      const [appts, consults] = await Promise.all([
-        getAllAppointments(token),
-        getAllConsultations(token),
-      ]);
-      const mapped: AdminBooking[] = [
-        ...(appts || []).map((a) => ({
-          id: a.id,
-          fullName: a.fullName,
-          email: a.email,
-          phoneNumber: a.phoneNumber,
-          date: a.date,
-          time: a.time,
-          status: String(a.status),
-          reason: a.reason,
-          kind: "appointment" as const,
-          typeLabel: a.appointmentType || "appointment",
-        })),
-        ...(consults || []).map((c) => ({
-          id: c.id,
-          fullName: c.fullName,
-          email: c.email,
-          phoneNumber: c.phoneNumber,
-          date: c.date,
-          time: c.time,
-          status: String(c.status),
-          reason: c.reason,
-          kind: "consultation" as const,
-          typeLabel: c.consultationType || "consultation",
-          googleMeetLink: c.googleMeetLink,
-          fileName: c.fileName,
-          fileUrl: c.fileUrl,
-        })),
-      ].sort((a, b) =>
-        `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`),
-      );
-      setRows(mapped);
+      const data = await listBookings(token, {
+        status,
+        type: kind,
+        search: debouncedSearch,
+      });
+      setRows(data || []);
     } catch {
       toast.error("Failed to load bookings");
       setRows([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, status, kind, debouncedSearch]);
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
-  const filtered = useMemo(() => {
-    return rows.filter((row) => {
-      const q = search.toLowerCase();
-      const matchesSearch =
-        !q ||
-        row.fullName.toLowerCase().includes(q) ||
-        row.email.toLowerCase().includes(q) ||
-        row.reason?.toLowerCase().includes(q);
-      const matchesStatus = status === "all" || row.status === status;
-      const matchesKind = kind === "all" || row.kind === kind;
-      return matchesSearch && matchesStatus && matchesKind;
-    });
-  }, [rows, search, status, kind]);
+  }, [load]);
 
   const updateStatus = async (row: AdminBooking, next: string) => {
     if (!token) return;
@@ -166,7 +144,7 @@ function AdminBookingsContent() {
       </AdminFilterBar>
 
       <AdminDataTable
-        rows={filtered}
+        rows={rows}
         rowKey={(row) => `${row.kind}-${row.id}`}
         emptyMessage={loading ? "Loading bookings..." : "No bookings found."}
         onRowClick={(row) =>

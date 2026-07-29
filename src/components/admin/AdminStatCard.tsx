@@ -19,7 +19,7 @@ export function AdminStatCard({
   return (
     <div
       className={cn(
-        "rounded-xl border border-gray-200 bg-white p-4 shadow-sm",
+        "rounded-xl border border-gray-200 bg-white p-4 ",
         className,
       )}
     >
