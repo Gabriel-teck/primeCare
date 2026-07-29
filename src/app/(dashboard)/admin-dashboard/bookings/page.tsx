@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { listBookings } from "@/lib/api/bookings";
 import { updateAppointment } from "@/lib/api/appointment";
 import { updateConsultation } from "@/lib/api/consultation";
 import type { AdminBooking } from "@/lib/admin/types";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   AdminDataTable,
   AdminFilterBar,
@@ -17,7 +18,6 @@ import {
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Suspense } from "react";
 
 export default function AdminBookingsPage() {
   return (
@@ -34,15 +34,10 @@ function AdminBookingsContent() {
   const [rows, setRows] = useState<AdminBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(searchParams.get("search") || "");
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [status, setStatus] = useState(searchParams.get("status") || "all");
   const [kind, setKind] = useState(searchParams.get("type") || "all");
   const [busyId, setBusyId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
-    return () => window.clearTimeout(timer);
-  }, [search]);
 
   const syncUrl = useCallback(
     (next: { status: string; type: string; search: string }) => {
@@ -105,6 +100,8 @@ function AdminBookingsContent() {
     }
   };
 
+  const isFiltering = search !== debouncedSearch || loading;
+
   return (
     <div>
       <AdminPageHeader
@@ -116,7 +113,7 @@ function AdminBookingsContent() {
         <AdminSearchInput
           value={search}
           onChange={setSearch}
-          placeholder="Search patient, email, reason..."
+          placeholder="Search by patient name and email"
         />
         <AdminFilterSelect
           label="Status"
@@ -146,7 +143,8 @@ function AdminBookingsContent() {
       <AdminDataTable
         rows={rows}
         rowKey={(row) => `${row.kind}-${row.id}`}
-        emptyMessage={loading ? "Loading bookings..." : "No bookings found."}
+        loading={isFiltering}
+        emptyMessage="No bookings found."
         onRowClick={(row) =>
           router.push(`/admin-dashboard/bookings/${row.kind}-${row.id}`)
         }

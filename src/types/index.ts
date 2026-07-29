@@ -52,3 +52,4 @@ export type {
   UpsertContentPayload,
   UpdateContentPayload,
 } from "./content";
+export type { PatientDirectoryStatus, PatientDirectoryItem } from "./patient";

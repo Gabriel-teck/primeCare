@@ -1,12 +1,40 @@
 import { api } from "./client";
 import type { ChatAccessResponse, Payment, UnlockChatResponse } from "@/types";
 
-export async function listPayments(token: string | null, status?: string) {
+export type ListPaymentsParams = {
+  search?: string;
+  status?: string;
+};
+
+export async function listPayments(
+  token: string | null,
+  params: ListPaymentsParams | string = {},
+) {
+  // Back-compat: listPayments(token, "failed")
+  const query =
+    typeof params === "string"
+      ? { status: params }
+      : {
+          search: params.search?.trim() || undefined,
+          status:
+            params.status && params.status !== "all"
+              ? params.status
+              : undefined,
+        };
+
   return api.get<Payment[]>("/payments", {
     token,
     auth: true,
-    query: { status },
+    query,
   });
+}
+
+export async function updatePayment(
+  id: string,
+  data: { chatEntitled?: boolean },
+  token: string | null,
+) {
+  return api.patch<Payment>(`/payments/${id}`, data, { token, auth: true });
 }
 
 export async function getMyPayments(token: string | null) {

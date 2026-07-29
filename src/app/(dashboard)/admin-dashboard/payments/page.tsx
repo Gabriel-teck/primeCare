@@ -1,7 +1,11 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { listPayments, updatePayment } from "@/lib/api/payments";
+import type { Payment } from "@/types";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   AdminDataTable,
   AdminFilterBar,
@@ -11,7 +15,6 @@ import {
   AdminStatusBadge,
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
-import { mockPayments } from "@/lib/admin/mock-data";
 import { toast } from "sonner";
 
 export default function AdminPaymentsPage() {
@@ -23,32 +26,80 @@ export default function AdminPaymentsPage() {
 }
 
 function PaymentsContent() {
+  const { token } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
   const [status, setStatus] = useState(searchParams.get("status") || "all");
-  const [rows, setRows] = useState(mockPayments);
+  const [rows, setRows] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const debouncedSearch = useDebouncedValue(search, 300);
 
-  const filtered = useMemo(() => {
-    return rows.filter((row) => {
-      const q = search.toLowerCase();
-      const matchesSearch =
-        !q ||
-        row.patientName.toLowerCase().includes(q) ||
-        row.patientEmail.toLowerCase().includes(q) ||
-        row.description.toLowerCase().includes(q);
-      const matchesStatus = status === "all" || row.status === status;
-      return matchesSearch && matchesStatus;
-    });
-  }, [rows, search, status]);
+  const syncUrl = useCallback(
+    (next: { status: string; search: string }) => {
+      const params = new URLSearchParams();
+      if (next.status && next.status !== "all")
+        params.set("status", next.status);
+      if (next.search.trim()) params.set("search", next.search.trim());
+      const qs = params.toString();
+      router.replace(
+        qs ? `/admin-dashboard/payments?${qs}` : "/admin-dashboard/payments",
+      );
+    },
+    [router],
+  );
 
-  const toggleEntitlement = (id: string) => {
-    setRows((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, chatEntitled: !r.chatEntitled } : r,
-      ),
-    );
-    toast.success("Chat entitlement updated (mock)");
+  useEffect(() => {
+    syncUrl({ status, search: debouncedSearch });
+  }, [status, debouncedSearch, syncUrl]);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const payments = await listPayments(token, {
+        search: debouncedSearch,
+        status,
+      });
+      setRows(payments || []);
+    } catch {
+      toast.error("Failed to load payments");
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, debouncedSearch, status]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const toggleEntitlement = async (row: Payment) => {
+    if (!token) return;
+    setBusyId(row.id);
+    try {
+      const updated = await updatePayment(
+        row.id,
+        { chatEntitled: !row.chatEntitled },
+        token,
+      );
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === row.id ? { ...r, chatEntitled: updated.chatEntitled } : r,
+        ),
+      );
+      toast.success(
+        updated.chatEntitled ? "Chat access enabled" : "Chat access disabled",
+      );
+    } catch {
+      toast.error("Could not update chat access");
+    } finally {
+      setBusyId(null);
+    }
   };
+
+  const isFiltering = search !== debouncedSearch || loading;
 
   return (
     <div>
@@ -78,8 +129,10 @@ function PaymentsContent() {
       </AdminFilterBar>
 
       <AdminDataTable
-        rows={filtered}
+        rows={rows}
         rowKey={(row) => row.id}
+        loading={isFiltering}
+        emptyMessage="No payments found."
         columns={[
           {
             key: "patient",
@@ -114,7 +167,8 @@ function PaymentsContent() {
                 size="sm"
                 variant="outline"
                 className="border-green-700 text-green-700"
-                onClick={() => toggleEntitlement(row.id)}
+                disabled={busyId === row.id}
+                onClick={() => toggleEntitlement(row)}
               >
                 {row.chatEntitled ? "Enabled" : "Disabled"}
               </Button>
