@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { patientNavItems, isPatientNavActive } from "@/components/patient/nav";
-import { useEffect, useState } from "react";
+import { useUnreadBadge } from "@/hooks/useUnreadBadge";
 
 interface UserDashboardSidebarProps {
   isOpen?: boolean;
@@ -16,25 +16,7 @@ export default function UserDashoardSidebar({
   onClose,
 }: UserDashboardSidebarProps) {
   const pathname = usePathname();
-  const [unreadMessages, setUnreadMessages] = useState(0);
-
-  useEffect(() => {
-    const sync = () => {
-      try {
-        const raw = localStorage.getItem("primecare-message-unread");
-        setUnreadMessages(raw ? Number(raw) || 0 : 0);
-      } catch {
-        setUnreadMessages(0);
-      }
-    };
-    sync();
-    window.addEventListener("storage", sync);
-    window.addEventListener("primecare-unread", sync);
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener("primecare-unread", sync);
-    };
-  }, []);
+  const { count: unreadMessages } = useUnreadBadge();
 
   const NavLinks = ({ onNavigate }: { onNavigate?: () => void }) => (
     <nav className="space-y-1 px-3 py-4">

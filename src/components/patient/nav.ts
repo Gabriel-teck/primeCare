@@ -57,5 +57,3 @@ export function isPatientNavActive(pathname: string, href: string) {
   if (href === PATIENT_BASE) return pathname === PATIENT_BASE;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
-
-export const CHAT_ACCESS_KEY = "primecare-chat-access";

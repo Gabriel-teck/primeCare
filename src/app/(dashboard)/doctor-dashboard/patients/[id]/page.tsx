@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -10,19 +10,74 @@ import {
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { bookingsForPatient, getPatientById } from "@/lib/doctor/mock-data";
+import { useAuth } from "@/context/AuthContext";
+import { getPatientById } from "@/lib/api/user";
+import { getDoctorAppointments } from "@/lib/api/appointment";
+import { getDoctorConsultations } from "@/lib/api/consultation";
+import { createPatientNote, listPatientNotes } from "@/lib/api/records";
+import type { AdminBooking } from "@/lib/admin/types";
+import { bookingRouteId, mapDoctorBookings } from "@/lib/doctor/bookings";
+import { Loader2 } from "lucide-react";
 
 export default function DoctorPatientDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { token } = useAuth();
   const id = String(params.id || "");
-  const patient = getPatientById(id);
-  const [notes, setNotes] = useState(patient?.notes || "");
 
-  const bookings = useMemo(
-    () => (patient ? bookingsForPatient(patient.email) : []),
-    [patient],
+  const [patient, setPatient] = useState<{
+    id: string;
+    fullName: string;
+    email: string;
+    phone?: string | null;
+  } | null>(null);
+  const [bookings, setBookings] = useState<AdminBooking[]>([]);
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [savingNotes, setSavingNotes] = useState(false);
+
+  useEffect(() => {
+    if (!token || !id) return;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [p, appts, consults, noteRows] = await Promise.all([
+          getPatientById(id, token),
+          getDoctorAppointments(token),
+          getDoctorConsultations(token),
+          listPatientNotes(id, token).catch(() => []),
+        ]);
+        setPatient(p);
+        const all = mapDoctorBookings(appts || [], consults || []).filter(
+          (b) =>
+            b.email.toLowerCase() === p.email.toLowerCase() ||
+            (appts || []).some((a) => a.id === b.id && a.patientId === id) ||
+            (consults || []).some((c) => c.id === b.id && c.patientId === id),
+        );
+        setBookings(all);
+        setNotes(noteRows?.[0]?.body || "");
+      } catch {
+        toast.error("Failed to load patient");
+        setPatient(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, [token, id]);
+
+  const lastVisit = useMemo(
+    () => (bookings[0] ? `${bookings[0].date} · ${bookings[0].time}` : "—"),
+    [bookings],
   );
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-[#1d884a]" />
+      </div>
+    );
+  }
 
   if (!patient) {
     return (
@@ -37,6 +92,19 @@ export default function DoctorPatientDetailPage() {
       </div>
     );
   }
+
+  const saveNotes = async () => {
+    if (!token || !notes.trim()) return;
+    setSavingNotes(true);
+    try {
+      await createPatientNote(patient.id, notes.trim(), token);
+      toast.success("Notes saved");
+    } catch {
+      toast.error("Could not save notes");
+    } finally {
+      setSavingNotes(false);
+    }
+  };
 
   return (
     <div>
@@ -53,7 +121,7 @@ export default function DoctorPatientDetailPage() {
             </Button>
             <Button asChild className="bg-green-700 hover:bg-green-600">
               <Link
-                href={`/doctor-dashboard/messages?tab=patients&conversationId=${patient.id}`}
+                href={`/doctor-dashboard/messages?tab=patients&patientId=${patient.id}`}
               >
                 Message
               </Link>
@@ -75,9 +143,7 @@ export default function DoctorPatientDetailPage() {
             </div>
             <div>
               <dt className="text-gray-500">Last / next visit</dt>
-              <dd className="mt-1 text-[#212529]">
-                {patient.lastVisit || "—"}
-              </dd>
+              <dd className="mt-1 text-[#212529]">{lastVisit}</dd>
             </div>
           </dl>
         </AdminSectionCard>
@@ -91,9 +157,10 @@ export default function DoctorPatientDetailPage() {
           />
           <Button
             className="mt-3 bg-green-700 hover:bg-green-600"
-            onClick={() => toast.success("Notes saved (mock)")}
+            disabled={savingNotes}
+            onClick={() => void saveNotes()}
           >
-            Save notes
+            {savingNotes ? "Saving…" : "Save notes"}
           </Button>
         </AdminSectionCard>
 
@@ -108,7 +175,7 @@ export default function DoctorPatientDetailPage() {
             <ul className="divide-y divide-gray-100">
               {bookings.map((b) => (
                 <li
-                  key={b.id}
+                  key={bookingRouteId(b)}
                   className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
@@ -125,7 +192,9 @@ export default function DoctorPatientDetailPage() {
                   <div className="flex items-center gap-2">
                     <AdminStatusBadge status={b.status} />
                     <Button asChild size="sm" variant="outline">
-                      <Link href={`/doctor-dashboard/schedule/${b.id}`}>
+                      <Link
+                        href={`/doctor-dashboard/schedule/${bookingRouteId(b)}`}
+                      >
                         Open
                       </Link>
                     </Button>

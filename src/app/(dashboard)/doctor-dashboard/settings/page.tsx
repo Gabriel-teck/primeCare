@@ -75,7 +75,7 @@ export default function DoctorSettingsPage() {
             </div>
             <Button
               className="bg-green-700 hover:bg-green-600"
-              onClick={() => toast.success("Profile saved (mock)")}
+              onClick={() => toast.message("Settings API not connected yet")}
             >
               Save profile
             </Button>
@@ -105,7 +105,7 @@ export default function DoctorSettingsPage() {
             </div>
             <Button
               className="bg-green-700 hover:bg-green-600"
-              onClick={() => toast.success("Consult defaults saved (mock)")}
+              onClick={() => toast.message("Settings API not connected yet")}
             >
               Save defaults
             </Button>
@@ -152,7 +152,7 @@ export default function DoctorSettingsPage() {
           </div>
           <Button
             className="mt-3 bg-green-700 hover:bg-green-600"
-            onClick={() => toast.success("Availability saved (mock)")}
+            onClick={() => toast.message("Settings API not connected yet")}
           >
             Save availability
           </Button>
@@ -177,7 +177,7 @@ export default function DoctorSettingsPage() {
             />
             <Button
               className="bg-green-700 hover:bg-green-600"
-              onClick={() => toast.success("Notification prefs saved (mock)")}
+              onClick={() => toast.message("Settings API not connected yet")}
             >
               Save notifications
             </Button>

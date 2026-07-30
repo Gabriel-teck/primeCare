@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Loader2, Send } from "lucide-react";
 import {
   AdminEmptyState,
   AdminPageHeader,
@@ -10,15 +10,32 @@ import {
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ChatPeerStatus } from "@/components/chat/ChatPeerStatus";
+import { useAuth } from "@/context/AuthContext";
+import { useSocket } from "@/context/SocketContext";
 import {
-  mockAdminDmMessages,
-  mockPatientThreads,
-  type AdminDmMessage,
-  type PatientMessage,
-  type PatientThread,
-} from "@/lib/doctor/mock-data";
+  createConversation,
+  listConversations,
+  markConversationRead,
+} from "@/lib/api/chat";
+import { getDoctorAppointments } from "@/lib/api/appointment";
+import { getDoctorConsultations } from "@/lib/api/consultation";
+import { useMessageCache } from "@/hooks/useMessageCache";
+import { usePeerPresence, useTypingIndicator } from "@/hooks/useChatPresence";
+import { useUnreadBadge } from "@/hooks/useUnreadBadge";
+import type { ChatMessage, Conversation } from "@/types";
+import { toast } from "sonner";
 
 type Tab = "patients" | "admin";
+
+type PatientContact = {
+  patientId: string;
+  patientName: string;
+  patientEmail: string;
+  conversationId?: string;
+  preview?: string;
+  unreadCount?: number;
+};
 
 export default function DoctorMessagesPage() {
   return (
@@ -29,113 +46,306 @@ export default function DoctorMessagesPage() {
 }
 
 function DoctorMessagesContent() {
+  const { token, user } = useAuth();
+  const { socket } = useSocket();
+  const { refresh: refreshUnread } = useUnreadBadge();
+  const cache = useMessageCache(token);
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") === "admin" ? "admin" : "patients";
   const [tab, setTab] = useState<Tab>(initialTab);
   const [search, setSearch] = useState("");
+  const [contacts, setContacts] = useState<PatientContact[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
-    searchParams.get("conversationId"),
+    searchParams.get("patientId") || searchParams.get("conversationId"),
   );
   const [showAdminThread, setShowAdminThread] = useState(
     searchParams.get("tab") === "admin",
   );
-  const [patientThreads, setPatientThreads] =
-    useState<PatientThread[]>(mockPatientThreads);
-  const [adminMessages, setAdminMessages] =
-    useState<AdminDmMessage[]>(mockAdminDmMessages);
+  const [adminConversationId, setAdminConversationId] = useState<string | null>(
+    null,
+  );
+  const [adminPreview, setAdminPreview] = useState("No messages yet");
+  const [adminUnread, setAdminUnread] = useState(0);
+  const [adminPeerId, setAdminPeerId] = useState<string | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
+  const [loadingList, setLoadingList] = useState(true);
+  const [loadingThread, setLoadingThread] = useState(false);
+
+  const peerId = tab === "admin" ? adminPeerId : selectedPatientId || null;
+  const online = usePeerPresence(peerId);
+  const { peerTyping, emitTyping } = useTypingIndicator(activeConversationId);
+
+  const applyConversations = useCallback((convos: Conversation[]) => {
+    const patientConvos = (convos || []).filter(
+      (c) => c.type === "DOCTOR_PATIENT",
+    );
+    const adminConvo = (convos || []).find((c) => c.type === "DOCTOR_ADMIN");
+    setAdminConversationId(adminConvo?.id || null);
+    setAdminPreview(adminConvo?.messages?.[0]?.content || "No messages yet");
+    setAdminUnread(adminConvo?.unreadCount || 0);
+    setAdminPeerId(adminConvo?.peer?.id || adminConvo?.adminId || null);
+    return { patientConvos, adminConvo };
+  }, []);
+
+  const loadLists = useCallback(async () => {
+    if (!token) return;
+    setLoadingList(true);
+    try {
+      const [convos, appts, consults] = await Promise.all([
+        listConversations(token),
+        getDoctorAppointments(token),
+        getDoctorConsultations(token),
+      ]);
+
+      const { patientConvos } = applyConversations(convos || []);
+      await cache.preloadMany((convos || []).map((c) => c.id));
+
+      const byPatient = new Map<string, PatientContact>();
+
+      patientConvos.forEach((c) => {
+        if (!c.patientId) return;
+        byPatient.set(c.patientId, {
+          patientId: c.patientId,
+          patientName: c.peer?.fullName || "Patient",
+          patientEmail: c.peer?.email || "",
+          conversationId: c.id,
+          preview: c.messages?.[0]?.content || "No messages yet",
+          unreadCount: c.unreadCount || 0,
+        });
+      });
+
+      [...(appts || []), ...(consults || [])].forEach(
+        (row: { patientId?: string; fullName: string; email: string }) => {
+          const id = row.patientId;
+          if (!id || byPatient.has(id)) return;
+          byPatient.set(id, {
+            patientId: id,
+            patientName: row.fullName,
+            patientEmail: row.email,
+            preview: "No messages yet",
+            unreadCount: 0,
+          });
+        },
+      );
+
+      setContacts([...byPatient.values()]);
+    } catch {
+      toast.error("Failed to load messages");
+      setContacts([]);
+    } finally {
+      setLoadingList(false);
+    }
+  }, [token, cache, applyConversations]);
+
+  useEffect(() => {
+    void loadLists();
+  }, [loadLists]);
 
   useEffect(() => {
     const nextTab = searchParams.get("tab") === "admin" ? "admin" : "patients";
     setTab(nextTab);
-    const conv = searchParams.get("conversationId");
-    if (conv) {
-      setSelectedPatientId(conv);
+    const patientId =
+      searchParams.get("patientId") || searchParams.get("conversationId");
+    if (patientId) {
+      setSelectedPatientId(patientId);
       setTab("patients");
     }
     if (nextTab === "admin") setShowAdminThread(true);
   }, [searchParams]);
 
-  const unreadPatientTotal = useMemo(
-    () =>
-      patientThreads.reduce(
-        (sum, t) =>
-          sum +
-          t.messages.filter((m) => !m.read && m.senderRole === "patient")
-            .length,
-        0,
-      ),
-    [patientThreads],
-  );
-  const unreadAdminTotal = useMemo(
-    () =>
-      adminMessages.filter((m) => !m.read && m.senderRole === "super_admin")
-        .length,
-    [adminMessages],
+  const openThread = useCallback(
+    async (conversationId: string) => {
+      if (!token) return;
+      setActiveConversationId(conversationId);
+      const cached = cache.getCached(conversationId);
+      if (cached) {
+        setMessages(cached);
+        setLoadingThread(false);
+      } else {
+        setLoadingThread(true);
+      }
+      socket?.emit("joinConversation", { conversationId });
+      void markConversationRead(conversationId, token).then(() =>
+        refreshUnread(),
+      );
+      setContacts((prev) =>
+        prev.map((c) =>
+          c.conversationId === conversationId ? { ...c, unreadCount: 0 } : c,
+        ),
+      );
+      if (conversationId === adminConversationId) setAdminUnread(0);
+      if (!cached) {
+        try {
+          await cache.preloadMany([conversationId]);
+          setMessages(cache.getCached(conversationId) || []);
+        } catch {
+          toast.error("Failed to load messages");
+          setMessages([]);
+        } finally {
+          setLoadingThread(false);
+        }
+      }
+    },
+    [token, socket, cache, refreshUnread, adminConversationId],
   );
 
-  const filteredThreads = useMemo(() => {
+  useEffect(() => {
+    if (!token || tab !== "patients" || !selectedPatientId) return;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const existing = contacts.find(
+          (c) => c.patientId === selectedPatientId,
+        )?.conversationId;
+        if (existing && activeConversationId === existing) {
+          const cached = cache.getCached(existing);
+          if (cached) setMessages(cached);
+          return;
+        }
+        const convo =
+          existing ||
+          (
+            await createConversation(
+              { type: "DOCTOR_PATIENT", patientId: selectedPatientId },
+              token,
+            )
+          ).id;
+        if (cancelled) return;
+        if (!existing) {
+          cache.setCached(convo, []);
+          await loadLists();
+        }
+        await openThread(convo);
+      } catch {
+        if (!cancelled) toast.error("Could not open patient chat");
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, tab, selectedPatientId]);
+
+  useEffect(() => {
+    if (!token || tab !== "admin" || !showAdminThread) return;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const convo =
+          adminConversationId ||
+          (await createConversation({ type: "DOCTOR_ADMIN" }, token)).id;
+        if (cancelled) return;
+        if (!adminConversationId) {
+          setAdminConversationId(convo);
+          cache.setCached(convo, []);
+          await loadLists();
+        }
+        await openThread(convo);
+      } catch {
+        if (!cancelled) toast.error("Could not open admin chat");
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, tab, showAdminThread]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const onReceive = (message: ChatMessage) => {
+      if (message.conversationId) {
+        cache.appendCached(message.conversationId, message);
+      }
+      if (message.conversationId !== activeConversationId) {
+        if (message.conversationId === adminConversationId) {
+          setAdminUnread((n) => n + 1);
+          setAdminPreview(message.content);
+        } else {
+          setContacts((prev) =>
+            prev.map((c) =>
+              c.conversationId === message.conversationId
+                ? {
+                    ...c,
+                    unreadCount: (c.unreadCount || 0) + 1,
+                    preview: message.content,
+                  }
+                : c,
+            ),
+          );
+        }
+        void refreshUnread();
+        return;
+      }
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === message.id)) return prev;
+        return [...prev.filter((m) => !m.id.startsWith("temp-")), message];
+      });
+      void markConversationRead(activeConversationId, token).then(() =>
+        refreshUnread(),
+      );
+    };
+    socket.on("receiveMessage", onReceive);
+    return () => {
+      socket.off("receiveMessage", onReceive);
+    };
+  }, [
+    socket,
+    activeConversationId,
+    adminConversationId,
+    cache,
+    token,
+    refreshUnread,
+  ]);
+
+  const filteredContacts = useMemo(() => {
     const q = search.toLowerCase();
-    return patientThreads.filter(
+    return contacts.filter(
       (t) =>
         !q ||
         t.patientName.toLowerCase().includes(q) ||
         t.patientEmail.toLowerCase().includes(q),
     );
-  }, [patientThreads, search]);
+  }, [contacts, search]);
 
-  const selectedThread =
-    patientThreads.find((t) => t.patientId === selectedPatientId) || null;
+  const selectedContact =
+    contacts.find((t) => t.patientId === selectedPatientId) || null;
 
-  const showPatientThread = tab === "patients" && Boolean(selectedThread);
+  const showPatientThread = tab === "patients" && Boolean(selectedContact);
   const showThread = tab === "admin" ? showAdminThread : showPatientThread;
 
-  const sendPatientMessage = () => {
-    if (!selectedPatientId || !draft.trim()) return;
-    const message: PatientMessage = {
-      id: `local-p-${Date.now()}`,
-      senderId: "doc-1",
-      senderRole: "doctor",
-      content: draft.trim(),
+  const unreadPatientTotal = contacts.reduce(
+    (sum, c) => sum + (c.unreadCount || 0),
+    0,
+  );
+
+  const send = () => {
+    if (!activeConversationId || !draft.trim() || !socket) return;
+    const content = draft.trim();
+    setDraft("");
+    emitTyping(false);
+    const tempId = `temp-${Date.now()}`;
+    const tempMsg: ChatMessage = {
+      id: tempId,
+      content,
+      sender: "doctor",
+      senderId: user?.id,
       createdAt: new Date().toISOString(),
-      read: true,
+      conversationId: activeConversationId,
     };
-    setPatientThreads((prev) => {
-      const existing = prev.find((t) => t.patientId === selectedPatientId);
-      if (existing) {
-        return prev.map((t) =>
-          t.patientId === selectedPatientId
-            ? { ...t, messages: [...t.messages, message] }
-            : t,
-        );
-      }
-      return prev;
+    setMessages((prev) => [...prev, tempMsg]);
+    cache.appendCached(activeConversationId, tempMsg);
+    socket.emit("sendMessage", {
+      conversationId: activeConversationId,
+      content,
     });
-    setDraft("");
   };
-
-  const sendAdminMessage = () => {
-    if (!draft.trim()) return;
-    const message: AdminDmMessage = {
-      id: `local-a-${Date.now()}`,
-      senderId: "doc-1",
-      senderRole: "doctor",
-      content: draft.trim(),
-      createdAt: new Date().toISOString(),
-      read: true,
-    };
-    setAdminMessages((prev) => [...prev, message]);
-    setDraft("");
-  };
-
-  const unreadForPatient = (patientId: string) =>
-    patientThreads
-      .find((t) => t.patientId === patientId)
-      ?.messages.filter((m) => !m.read && m.senderRole === "patient").length ||
-    0;
-
-  const lastPreview = (thread: PatientThread) =>
-    thread.messages.at(-1)?.content || "No messages yet";
 
   return (
     <div>
@@ -151,6 +361,7 @@ function DoctorMessagesContent() {
           onClick={() => {
             setTab("patients");
             setShowAdminThread(false);
+            emitTyping(false);
           }}
           label="Patients"
           badge={unreadPatientTotal}
@@ -161,9 +372,10 @@ function DoctorMessagesContent() {
             setTab("admin");
             setSelectedPatientId(null);
             setShowAdminThread(true);
+            emitTyping(false);
           }}
           label="Admin"
-          badge={unreadAdminTotal}
+          badge={adminUnread}
         />
       </div>
 
@@ -184,12 +396,19 @@ function DoctorMessagesContent() {
                 />
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto">
-                {filteredThreads.length === 0 ? (
-                  <p className="p-4 text-sm text-gray-500">No conversations.</p>
+                {loadingList ? (
+                  <div className="flex justify-center py-10">
+                    <Loader2 className="h-6 w-6 animate-spin text-[#1d884a]" />
+                  </div>
+                ) : filteredContacts.length === 0 ? (
+                  <p className="p-4 text-sm text-gray-500">
+                    No patients to message yet. Assigned bookings will appear
+                    here.
+                  </p>
                 ) : (
-                  filteredThreads.map((thread) => {
-                    const unread = unreadForPatient(thread.patientId);
+                  filteredContacts.map((thread) => {
                     const active = selectedPatientId === thread.patientId;
+                    const unread = thread.unreadCount || 0;
                     return (
                       <button
                         key={thread.patientId}
@@ -199,13 +418,7 @@ function DoctorMessagesContent() {
                           active ? "bg-green-50" : "hover:bg-gray-50"
                         }`}
                       >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-700">
-                          {thread.patientName
-                            .split(" ")
-                            .map((p) => p[0])
-                            .slice(0, 2)
-                            .join("")}
-                        </div>
+                        <Avatar initials={initials(thread.patientName)} />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
                             <p className="truncate font-medium text-[#212529]">
@@ -218,7 +431,7 @@ function DoctorMessagesContent() {
                             ) : null}
                           </div>
                           <p className="mt-1 truncate text-xs text-gray-400">
-                            {lastPreview(thread)}
+                            {thread.preview}
                           </p>
                         </div>
                       </button>
@@ -230,28 +443,30 @@ function DoctorMessagesContent() {
 
             <ThreadPane
               show={showPatientThread}
-              onBack={() => setSelectedPatientId(null)}
-              title={selectedThread?.patientName || ""}
-              subtitle={selectedThread?.patientEmail || ""}
+              onBack={() => {
+                setSelectedPatientId(null);
+                emitTyping(false);
+              }}
+              title={selectedContact?.patientName || ""}
+              status={<ChatPeerStatus online={online} typing={peerTyping} />}
               emptyDesktop={
                 <AdminEmptyState
                   title="Select a patient"
                   description="Choose a conversation to reply to a patient."
                 />
               }
-              hasSelection={Boolean(selectedThread)}
-              messages={(selectedThread?.messages || []).map((msg) => ({
-                id: msg.id,
-                mine: msg.senderRole === "doctor",
-                content: msg.content,
-                createdAt: msg.createdAt,
-              }))}
+              hasSelection={Boolean(selectedContact)}
+              loading={loadingThread}
+              messages={mapMessages(messages, user?.id, "doctor")}
               draft={draft}
-              setDraft={setDraft}
-              onSend={sendPatientMessage}
+              setDraft={(v) => {
+                setDraft(v);
+                emitTyping(Boolean(v.trim()));
+              }}
+              onSend={send}
               placeholder={
-                selectedThread
-                  ? `Message ${selectedThread.patientName}...`
+                selectedContact
+                  ? `Message ${selectedContact.patientName}...`
                   : "Message..."
               }
             />
@@ -278,22 +493,20 @@ function DoctorMessagesContent() {
                   showAdminThread ? "bg-green-50" : "hover:bg-gray-50"
                 }`}
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-700">
-                  AD
-                </div>
+                <Avatar initials="AD" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate font-medium text-[#212529]">
                       PrimeCare Admin
                     </p>
-                    {unreadAdminTotal > 0 ? (
+                    {adminUnread > 0 ? (
                       <span className="rounded-full bg-green-700 px-2 py-0.5 text-[10px] font-semibold text-white">
-                        {unreadAdminTotal}
+                        {adminUnread}
                       </span>
                     ) : null}
                   </div>
                   <p className="mt-1 truncate text-xs text-gray-400">
-                    {adminMessages.at(-1)?.content || "No messages yet"}
+                    {adminPreview}
                   </p>
                 </div>
               </button>
@@ -301,9 +514,12 @@ function DoctorMessagesContent() {
 
             <ThreadPane
               show={showAdminThread}
-              onBack={() => setShowAdminThread(false)}
+              onBack={() => {
+                setShowAdminThread(false);
+                emitTyping(false);
+              }}
               title="PrimeCare Admin"
-              subtitle="Platform operations"
+              status={<ChatPeerStatus online={online} typing={peerTyping} />}
               emptyDesktop={
                 <AdminEmptyState
                   title="Admin chat"
@@ -311,15 +527,14 @@ function DoctorMessagesContent() {
                 />
               }
               hasSelection={showAdminThread}
-              messages={adminMessages.map((msg) => ({
-                id: msg.id,
-                mine: msg.senderRole === "doctor",
-                content: msg.content,
-                createdAt: msg.createdAt,
-              }))}
+              loading={loadingThread}
+              messages={mapMessages(messages, user?.id, "doctor")}
               draft={draft}
-              setDraft={setDraft}
-              onSend={sendAdminMessage}
+              setDraft={(v) => {
+                setDraft(v);
+                emitTyping(Boolean(v.trim()));
+              }}
+              onSend={send}
               placeholder="Message admin..."
             />
           </>
@@ -327,6 +542,19 @@ function DoctorMessagesContent() {
       </div>
     </div>
   );
+}
+
+function mapMessages(
+  messages: ChatMessage[],
+  userId: string | undefined,
+  myRole: string,
+) {
+  return messages.map((msg) => ({
+    id: msg.id,
+    mine: msg.senderId === userId || msg.sender === myRole,
+    content: msg.content,
+    createdAt: msg.createdAt,
+  }));
 }
 
 function TabButton({
@@ -364,13 +592,31 @@ function TabButton({
   );
 }
 
+function Avatar({ initials }: { initials: string }) {
+  return (
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-700">
+      {initials}
+    </div>
+  );
+}
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 function ThreadPane({
   show,
   onBack,
   title,
-  subtitle,
+  status,
   emptyDesktop,
   hasSelection,
+  loading,
   messages,
   draft,
   setDraft,
@@ -380,9 +626,10 @@ function ThreadPane({
   show: boolean;
   onBack: () => void;
   title: string;
-  subtitle: string;
+  status: React.ReactNode;
   emptyDesktop: React.ReactNode;
   hasSelection: boolean;
+  loading: boolean;
   messages: {
     id: string;
     mine: boolean;
@@ -421,12 +668,16 @@ function ThreadPane({
             </Button>
             <div className="min-w-0">
               <p className="truncate font-semibold text-[#212529]">{title}</p>
-              <p className="truncate text-xs text-gray-500">{subtitle}</p>
+              {status}
             </div>
           </div>
 
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 sm:p-4">
-            {messages.length === 0 ? (
+            {loading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="h-6 w-6 animate-spin text-[#1d884a]" />
+              </div>
+            ) : messages.length === 0 ? (
               <p className="text-sm text-gray-500">
                 No messages yet. Start the conversation.
               </p>

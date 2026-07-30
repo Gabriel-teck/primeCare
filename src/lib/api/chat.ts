@@ -41,3 +41,14 @@ export async function sendMessage(
 export async function getUnreadCount(token: string | null) {
   return api.get<UnreadCountResponse>("/chat/unread", { token, auth: true });
 }
+
+export async function markConversationRead(
+  conversationId: string,
+  token: string | null,
+) {
+  return api.post<{ ok: boolean }>(
+    `/chat/conversations/${conversationId}/read`,
+    undefined,
+    { token, auth: true },
+  );
+}

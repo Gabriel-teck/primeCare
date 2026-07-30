@@ -4,5 +4,4 @@ export {
   PATIENT_BASE,
   getPatientPageTitle,
   isPatientNavActive,
-  CHAT_ACCESS_KEY,
 } from "./nav";

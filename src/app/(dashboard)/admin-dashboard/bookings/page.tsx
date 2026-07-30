@@ -105,7 +105,7 @@ function AdminBookingsContent() {
   return (
     <div>
       <AdminPageHeader
-        title="Bookings"
+        title="Manage Bookings"
         description="Manage appointments and consultations across the platform."
       />
 

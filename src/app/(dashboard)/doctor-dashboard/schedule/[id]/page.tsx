@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -11,26 +11,85 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 import {
-  getBookingById,
-  getPatientByEmail,
-  mockDoctorBookings,
-} from "@/lib/doctor/mock-data";
+  getDoctorAppointments,
+  updateAppointment,
+} from "@/lib/api/appointment";
+import {
+  getDoctorConsultations,
+  updateConsultation,
+} from "@/lib/api/consultation";
 import type { AdminBooking } from "@/lib/admin/types";
+import {
+  bookingRouteId,
+  mapDoctorBookings,
+  parseBookingRouteId,
+} from "@/lib/doctor/bookings";
+import { Loader2 } from "lucide-react";
 
 export default function DoctorScheduleDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const id = String(params.id || "");
-  const initial = getBookingById(id);
+  const { token } = useAuth();
+  const rawId = String(params.id || "");
+  const parsed = parseBookingRouteId(rawId);
 
-  const [booking, setBooking] = useState<AdminBooking | undefined>(initial);
-  const [meetLink, setMeetLink] = useState(initial?.googleMeetLink || "");
+  const [booking, setBooking] = useState<AdminBooking | undefined>();
+  const [related, setRelated] = useState<AdminBooking[]>([]);
+  const [meetLink, setMeetLink] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const patient = useMemo(
-    () => (booking ? getPatientByEmail(booking.email) : undefined),
-    [booking],
-  );
+  useEffect(() => {
+    if (!token || !parsed) {
+      setLoading(false);
+      return;
+    }
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [appts, consults] = await Promise.all([
+          getDoctorAppointments(token),
+          getDoctorConsultations(token),
+        ]);
+        const all = mapDoctorBookings(appts || [], consults || []);
+        const found = all.find(
+          (b) => b.kind === parsed.kind && b.id === parsed.id,
+        );
+        setBooking(found);
+        setMeetLink(found?.googleMeetLink || "");
+        setRelated(
+          found
+            ? all.filter(
+                (b) =>
+                  b.email.toLowerCase() === found.email.toLowerCase() &&
+                  !(b.kind === found.kind && b.id === found.id),
+              )
+            : [],
+        );
+      } catch {
+        toast.error("Failed to load booking");
+        setBooking(undefined);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, [token, rawId]);
+
+  const patientHref = useMemo(() => {
+    if (!booking) return null;
+    // Prefer patientId from source if we can find it via related list later; use email search path
+    return `/doctor-dashboard/patients`;
+  }, [booking]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-[#1d884a]" />
+      </div>
+    );
+  }
 
   if (!booking) {
     return (
@@ -46,16 +105,36 @@ export default function DoctorScheduleDetailPage() {
     );
   }
 
-  const setStatus = (status: string) => {
-    setBooking((prev) => (prev ? { ...prev, status } : prev));
-    toast.success(`Status updated to ${status}`);
+  const setStatus = async (status: string) => {
+    if (!token) return;
+    try {
+      if (booking.kind === "consultation") {
+        await updateConsultation(booking.id, { status }, token);
+      } else {
+        await updateAppointment(booking.id, { status }, token);
+      }
+      setBooking((prev) => (prev ? { ...prev, status } : prev));
+      toast.success(`Status updated to ${status}`);
+    } catch {
+      toast.error("Could not update status");
+    }
   };
 
-  const saveMeet = () => {
-    setBooking((prev) =>
-      prev ? { ...prev, googleMeetLink: meetLink.trim() || undefined } : prev,
-    );
-    toast.success("Meet link saved");
+  const saveMeet = async () => {
+    if (!token || booking.kind !== "consultation") return;
+    try {
+      await updateConsultation(
+        booking.id,
+        { googleMeetLink: meetLink.trim() || undefined },
+        token,
+      );
+      setBooking((prev) =>
+        prev ? { ...prev, googleMeetLink: meetLink.trim() || undefined } : prev,
+      );
+      toast.success("Meet link saved");
+    } catch {
+      toast.error("Could not save Meet link");
+    }
   };
 
   return (
@@ -100,115 +179,99 @@ export default function DoctorScheduleDetailPage() {
             </div>
             <div className="sm:col-span-2">
               <dt className="text-gray-500">Reason</dt>
-              <dd className="mt-1 text-[#212529]">
-                {booking.reason || "No reason provided."}
-              </dd>
+              <dd className="mt-1 text-[#212529]">{booking.reason || "—"}</dd>
             </div>
-            {booking.fileName ? (
-              <div className="sm:col-span-2">
-                <dt className="text-gray-500">Attached file</dt>
-                <dd className="mt-1 text-green-700">{booking.fileName}</dd>
-              </div>
-            ) : null}
           </dl>
 
-          {booking.kind === "consultation" ? (
-            <div className="mt-4 space-y-2 border-t border-gray-100 pt-4">
-              <label className="block text-sm text-gray-600">
-                Google Meet / session link
-              </label>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  value={meetLink}
-                  onChange={(e) => setMeetLink(e.target.value)}
-                  placeholder="https://meet.google.com/..."
-                />
-                <Button
-                  className="shrink-0 bg-green-700 hover:bg-green-600"
-                  onClick={saveMeet}
-                >
-                  Save link
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </AdminSectionCard>
-
-        <div className="space-y-4">
-          <AdminSectionCard title="Actions">
-            <div className="flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
+            {booking.status === "pending" ? (
               <Button
                 className="bg-green-700 hover:bg-green-600"
-                onClick={() => setStatus("confirmed")}
+                onClick={() => void setStatus("confirmed")}
               >
                 Confirm
               </Button>
-              <Button variant="outline" onClick={() => setStatus("completed")}>
-                Complete
-              </Button>
+            ) : null}
+            {booking.status === "confirmed" || booking.status === "pending" ? (
               <Button
                 variant="outline"
-                onClick={() => setStatus("rescheduled")}
+                onClick={() => void setStatus("completed")}
               >
-                Reschedule
+                Complete
               </Button>
+            ) : null}
+            {booking.status !== "cancelled" &&
+            booking.status !== "completed" ? (
               <Button
                 variant="ghost"
                 className="text-red-600"
-                onClick={() => setStatus("cancelled")}
+                onClick={() => void setStatus("cancelled")}
               >
                 Cancel
               </Button>
+            ) : null}
+          </div>
+        </AdminSectionCard>
+
+        <AdminSectionCard title="Patient">
+          <p className="text-sm text-[#212529]">{booking.fullName}</p>
+          <p className="text-xs text-gray-500">{booking.email}</p>
+          {patientHref ? (
+            <Button asChild size="sm" variant="outline" className="mt-3">
+              <Link href={patientHref}>View patients</Link>
+            </Button>
+          ) : null}
+        </AdminSectionCard>
+
+        {booking.kind === "consultation" ? (
+          <AdminSectionCard title="Google Meet" className="lg:col-span-3">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={meetLink}
+                onChange={(e) => setMeetLink(e.target.value)}
+                placeholder="https://meet.google.com/..."
+              />
+              <Button
+                className="bg-green-700 hover:bg-green-600"
+                onClick={() => void saveMeet()}
+              >
+                Save link
+              </Button>
             </div>
           </AdminSectionCard>
+        ) : null}
 
-          <AdminSectionCard title="Patient">
-            {patient ? (
-              <div className="space-y-3 text-sm">
-                <p className="font-medium text-[#212529]">{patient.fullName}</p>
-                <p className="text-gray-600">{patient.email}</p>
-                <Button asChild variant="outline" size="sm" className="w-full">
-                  <Link href={`/doctor-dashboard/patients/${patient.id}`}>
-                    View patient
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  size="sm"
-                  className="w-full bg-green-700 hover:bg-green-600"
+        <AdminSectionCard
+          title="Other bookings with this patient"
+          className="lg:col-span-3"
+        >
+          {related.length === 0 ? (
+            <p className="text-sm text-gray-500">No other bookings.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {related.map((b) => (
+                <li
+                  key={bookingRouteId(b)}
+                  className="flex items-center justify-between py-3 text-sm"
                 >
-                  <Link
-                    href={`/doctor-dashboard/messages?tab=patients&conversationId=${patient.id}`}
-                  >
-                    Message patient
-                  </Link>
-                </Button>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">
-                Patient profile not linked yet.
-              </p>
-            )}
-          </AdminSectionCard>
-
-          <AdminSectionCard title="Related bookings">
-            <ul className="space-y-2 text-sm">
-              {mockDoctorBookings
-                .filter((b) => b.email === booking.email && b.id !== booking.id)
-                .slice(0, 4)
-                .map((b) => (
-                  <li key={b.id}>
-                    <Link
-                      href={`/doctor-dashboard/schedule/${b.id}`}
-                      className="text-green-700 hover:underline"
-                    >
-                      {b.date} · {b.kind}
-                    </Link>
-                  </li>
-                ))}
+                  <span className="capitalize">
+                    {b.kind} · {b.date} {b.time}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <AdminStatusBadge status={b.status} />
+                    <Button asChild size="sm" variant="outline">
+                      <Link
+                        href={`/doctor-dashboard/schedule/${bookingRouteId(b)}`}
+                      >
+                        Open
+                      </Link>
+                    </Button>
+                  </div>
+                </li>
+              ))}
             </ul>
-          </AdminSectionCard>
-        </div>
+          )}
+        </AdminSectionCard>
       </div>
     </div>
   );

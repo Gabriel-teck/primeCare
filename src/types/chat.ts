@@ -41,6 +41,7 @@ export type Conversation = {
   doctorId?: string;
   peer?: ChatPeer | null;
   messages?: ChatMessage[];
+  unreadCount?: number;
   updatedAt?: string;
 };
 
