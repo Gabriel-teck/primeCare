@@ -8,3 +8,4 @@ export { AdminFilterBar } from "./AdminFilterBar";
 export { AdminDataTable } from "./AdminDataTable";
 export { AdminSectionCard } from "./AdminSectionCard";
 export { AdminGuard } from "./AdminGuard";
+export { CatalogItemForm } from "./CatalogItemForm";

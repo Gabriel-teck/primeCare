@@ -16,7 +16,8 @@ export type CreateCatalogPayload = {
   name: string;
   type: string;
   description: string;
-  price?: number;
+  price?: number | null;
+  currency?: string;
   published?: boolean;
 };
 

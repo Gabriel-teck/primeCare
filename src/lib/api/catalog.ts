@@ -9,6 +9,10 @@ export async function listCatalog() {
   return api.get<CatalogItem[]>("/catalog");
 }
 
+export async function getCatalogItem(id: string) {
+  return api.get<CatalogItem>(`/catalog/${id}`);
+}
+
 export async function createCatalogItem(
   data: CreateCatalogPayload,
   token: string | null,
@@ -22,4 +26,8 @@ export async function updateCatalogItem(
   token: string | null,
 ) {
   return api.patch<CatalogItem>(`/catalog/${id}`, data, { token, auth: true });
+}
+
+export async function deleteCatalogItem(id: string, token: string | null) {
+  return api.delete<{ ok: boolean }>(`/catalog/${id}`, { token, auth: true });
 }

@@ -6,7 +6,6 @@ import {
   MessageSquare,
   CreditCard,
   Layers,
-  FileText,
   LineChart,
   Settings,
   type LucideIcon,
@@ -32,7 +31,6 @@ export const adminNavItems: AdminNavItem[] = [
     href: `${ADMIN_BASE}/payments`,
   },
   { label: "Manage Catalog", icon: Layers, href: `${ADMIN_BASE}/catalog` },
-  { label: "Manage Content", icon: FileText, href: `${ADMIN_BASE}/content` },
   { label: "Analytics", icon: LineChart, href: `${ADMIN_BASE}/analytics` },
   { label: "Settings", icon: Settings, href: `${ADMIN_BASE}/settings` },
 ];

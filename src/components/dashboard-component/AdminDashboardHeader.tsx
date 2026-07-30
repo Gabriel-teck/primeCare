@@ -1,25 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { LogOut, Menu, X, User } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
 import AdminDashboardSidebar from "./AdminDashboardSidebar";
 
 export default function AdminDashboardHeader() {
   const [showSidebar, setShowSidebar] = useState(false);
-  const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const initials =
     user?.fullName
       ?.split(" ")
@@ -27,11 +16,6 @@ export default function AdminDashboardHeader() {
       .join("")
       .slice(0, 2)
       .toUpperCase() || "AD";
-
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-  };
 
   return (
     <>
@@ -52,46 +36,16 @@ export default function AdminDashboardHeader() {
 
         <div className="hidden flex-1 lg:block" />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="ml-auto flex items-center gap-2 px-2 hover:bg-green-50"
-            >
-              <span className="hidden max-w-[160px] truncate text-sm font-semibold text-[#212529] sm:inline">
-                {user?.fullName || "Admin"}
-              </span>
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-green-100 text-green-700">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">
-                  {user?.fullName || "Admin"}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {user?.email}
-                </span>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => router.push("/admin-dashboard/settings")}
-            >
-              <User className="mr-2 h-4 w-4" />
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="ml-auto flex select-none items-center gap-2 px-1 pointer-events-none">
+          <span className="hidden max-w-[160px] truncate text-sm font-semibold text-[#212529] sm:inline">
+            {user?.fullName || "Admin"}
+          </span>
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="bg-green-100 text-green-700">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+        </div>
       </header>
 
       {showSidebar ? (
