@@ -1,28 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Menu, X, HeartPulse } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
-import { getPatientPageTitle } from "@/components/patient/nav";
 import UserDashoardSidebar from "./UserDashboardSidebar";
 
 export default function UserDashoardHeader() {
   const [showSidebar, setShowSidebar] = useState(false);
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, logout } = useAuth();
-  const pageTitle = getPatientPageTitle(pathname);
+  const { user } = useAuth();
   const initials =
     user?.fullName
       ?.split(" ")
@@ -30,11 +16,6 @@ export default function UserDashoardHeader() {
       .join("")
       .slice(0, 2)
       .toUpperCase() || "PT";
-
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-  };
 
   return (
     <>
@@ -53,56 +34,18 @@ export default function UserDashoardHeader() {
           </button>
         </div>
 
-        <div className="hidden min-w-0 text-[20px] font-semibold text-[#212529] lg:block">
-          {pageTitle}
-        </div>
+        <div className="hidden flex-1 lg:block" />
 
-        <div className="min-w-0 flex-1 truncate text-center lg:hidden">
-          <h1 className="truncate text-base font-semibold text-[#1d884a] sm:text-lg">
-            {pageTitle}
-          </h1>
+        <div className="ml-auto flex select-none items-center gap-2 px-1 pointer-events-none">
+          <span className="hidden max-w-[160px] truncate text-sm font-semibold text-[#212529] sm:inline">
+            {user?.fullName || "Patient"}
+          </span>
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="bg-green-100 text-green-700">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
         </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="flex items-center gap-2 px-2 hover:bg-green-50"
-            >
-              <span className="hidden max-w-[160px] truncate text-sm font-semibold text-[#212529] sm:inline">
-                {user?.fullName || "Patient"}
-              </span>
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-green-100 text-green-700">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">
-                  {user?.fullName || "Patient"}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {user?.email}
-                </span>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => router.push("/patient-dashboard/care")}
-            >
-              <HeartPulse className="mr-2 h-4 w-4" />
-              My Care
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </header>
 
       {showSidebar ? (

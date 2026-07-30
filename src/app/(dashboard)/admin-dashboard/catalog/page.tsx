@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AdminDataTable,
   AdminFilterBar,
@@ -9,15 +10,24 @@ import {
   AdminSearchInput,
   AdminStatusBadge,
 } from "@/components/admin";
+import { ConfirmModal } from "@/components/modals/ConfirmModal";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
 import {
-  createCatalogItem,
   listCatalog,
   updateCatalogItem,
+  deleteCatalogItem,
 } from "@/lib/api/catalog";
 import type { CatalogItem } from "@/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { Eye, EyeOff, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminCatalogPage() {
@@ -26,6 +36,8 @@ export default function AdminCatalogPage() {
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<CatalogItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const load = useCallback(async () => {
@@ -74,22 +86,18 @@ export default function AdminCatalogPage() {
     }
   };
 
-  const addItem = async () => {
-    if (!token) return;
+  const confirmDelete = async () => {
+    if (!token || !deleteTarget) return;
+    setDeleting(true);
     try {
-      const created = await createCatalogItem(
-        {
-          name: "New catalog item",
-          type: "service",
-          description: "Describe this service",
-          published: false,
-        },
-        token,
-      );
-      setRows((prev) => [...prev, created]);
-      toast.success("Catalog item created");
+      await deleteCatalogItem(deleteTarget.id, token);
+      setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+      toast.success("Catalog item deleted");
+      setDeleteTarget(null);
     } catch {
-      toast.error("Could not create catalog item");
+      toast.error("Could not delete catalog item");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -100,10 +108,10 @@ export default function AdminCatalogPage() {
         description="Specialties, urgent-care conditions, and service pricing."
         actions={
           <Button
-            className="bg-green-700 hover:bg-green-600 rounded-2xl"
-            onClick={() => void addItem()}
+            asChild
+            className="cursor-pointer rounded-2xl bg-green-700 hover:bg-green-600"
           >
-            Add item
+            <Link href="/admin-dashboard/catalog/new">Add item</Link>
           </Button>
         }
       />
@@ -132,12 +140,25 @@ export default function AdminCatalogPage() {
           {
             key: "name",
             header: "Name",
-            render: (row) => (
-              <div>
-                <p className="font-medium">{row.name}</p>
-                <p className="text-xs text-gray-500">{row.description}</p>
-              </div>
-            ),
+            className: "w-180",
+            render: (row) => {
+              const words = row.description.trim().split(/\s+/).filter(Boolean);
+              const description =
+                words.length > 100
+                  ? `${words.slice(0, 100).join(" ")}…`
+                  : row.description;
+              return (
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{row.name}</p>
+                  <p
+                    className="text-xs text-gray-500 line-clamp-2"
+                    title={row.description}
+                  >
+                    {description}
+                  </p>
+                </div>
+              );
+            },
           },
           {
             key: "type",
@@ -167,19 +188,77 @@ export default function AdminCatalogPage() {
           },
           {
             key: "actions",
-            header: "",
+            header: "Actions",
+            className: "w-12",
             render: (row) => (
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-green-700 text-green-700"
-                onClick={() => void togglePublished(row)}
-              >
-                {row.published ? "Unpublish" : "Publish"}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-gray-600 hover:bg-green-50 hover:text-green-700 cursor-pointer"
+                    aria-label="Open actions"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem asChild className="cursor-pointer gap-3">
+                    <Link href={`/admin-dashboard/catalog/${row.id}/edit`}>
+                      <Pencil className="h-4 w-4 text-green-700" />
+                      Edit
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer gap-3 text-red-600 focus:bg-red-50 focus:text-red-700"
+                    onClick={() => setDeleteTarget(row)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {row.published ? (
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-3"
+                      onClick={() => void togglePublished(row)}
+                    >
+                      <EyeOff className="h-4 w-4 text-green-700" />
+                      Unpublish
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-3"
+                      onClick={() => void togglePublished(row)}
+                    >
+                      <Eye className="h-4 w-4 text-green-700" />
+                      Publish
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             ),
           },
         ]}
+      />
+
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteTarget(null);
+        }}
+        title="Delete catalog item"
+        description={
+          deleteTarget
+            ? `Deleting “${deleteTarget.name}” will permanently remove it from the catalog.`
+            : "This action cannot be undone."
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="destructive"
+        confirmLoading={deleting}
+        onConfirm={() => void confirmDelete()}
       />
     </div>
   );

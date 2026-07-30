@@ -47,9 +47,4 @@ export type {
   CreateDoctorPayload,
   UpdateDoctorPayload,
 } from "./staff";
-export type {
-  ContentBlock,
-  UpsertContentPayload,
-  UpdateContentPayload,
-} from "./content";
 export type { PatientDirectoryStatus, PatientDirectoryItem } from "./patient";
