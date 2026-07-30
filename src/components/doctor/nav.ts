@@ -23,21 +23,6 @@ export const doctorNavItems: DoctorNavItem[] = [
   { label: "Settings", icon: Settings, href: `${DOCTOR_BASE}/settings` },
 ];
 
-export const doctorPageTitles: Record<string, string> = {
-  [DOCTOR_BASE]: "Overview",
-  [`${DOCTOR_BASE}/schedule`]: "Schedule",
-  [`${DOCTOR_BASE}/patients`]: "Patients",
-  [`${DOCTOR_BASE}/messages`]: "Messages",
-  [`${DOCTOR_BASE}/settings`]: "Settings",
-};
-
-export function getDoctorPageTitle(pathname: string) {
-  if (doctorPageTitles[pathname]) return doctorPageTitles[pathname];
-  if (pathname.startsWith(`${DOCTOR_BASE}/schedule/`)) return "Booking detail";
-  if (pathname.startsWith(`${DOCTOR_BASE}/patients/`)) return "Patient detail";
-  return "Doctor";
-}
-
 export function isDoctorNavActive(pathname: string, href: string) {
   if (href === DOCTOR_BASE) return pathname === DOCTOR_BASE;
   return pathname === href || pathname.startsWith(`${href}/`);

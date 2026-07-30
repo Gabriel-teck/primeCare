@@ -67,7 +67,7 @@ export default function AdminSettingsPage() {
             </div>
             <Button
               className="bg-green-700 hover:bg-green-600"
-              onClick={() => toast.success("Platform settings saved (mock)")}
+              onClick={() => toast.message("Settings API not connected yet")}
             >
               Save platform settings
             </Button>

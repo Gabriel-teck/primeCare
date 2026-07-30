@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AdminDataTable,
   AdminFilterBar,
@@ -10,17 +10,44 @@ import {
   AdminStatusBadge,
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
-import { mockCatalog } from "@/lib/admin/mock-data";
+import { useAuth } from "@/context/AuthContext";
+import {
+  createCatalogItem,
+  listCatalog,
+  updateCatalogItem,
+} from "@/lib/api/catalog";
+import type { CatalogItem } from "@/types";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { toast } from "sonner";
 
 export default function AdminCatalogPage() {
-  const [rows, setRows] = useState(mockCatalog);
+  const { token } = useAuth();
+  const [rows, setRows] = useState<CatalogItem[]>([]);
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const debouncedSearch = useDebouncedValue(search, 300);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await listCatalog();
+      setRows(data || []);
+    } catch {
+      toast.error("Failed to load catalog");
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const filtered = useMemo(() => {
+    const q = debouncedSearch.toLowerCase();
     return rows.filter((row) => {
-      const q = search.toLowerCase();
       const matchesSearch =
         !q ||
         row.name.toLowerCase().includes(q) ||
@@ -28,13 +55,42 @@ export default function AdminCatalogPage() {
       const matchesType = type === "all" || row.type === type;
       return matchesSearch && matchesType;
     });
-  }, [rows, search, type]);
+  }, [rows, debouncedSearch, type]);
 
-  const togglePublished = (id: string) => {
-    setRows((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, published: !r.published } : r)),
-    );
-    toast.success("Catalog item updated (mock)");
+  const isFiltering = search !== debouncedSearch || loading;
+
+  const togglePublished = async (row: CatalogItem) => {
+    if (!token) return;
+    try {
+      const updated = await updateCatalogItem(
+        row.id,
+        { published: !row.published },
+        token,
+      );
+      setRows((prev) => prev.map((r) => (r.id === row.id ? updated : r)));
+      toast.success(updated.published ? "Published" : "Unpublished");
+    } catch {
+      toast.error("Could not update catalog item");
+    }
+  };
+
+  const addItem = async () => {
+    if (!token) return;
+    try {
+      const created = await createCatalogItem(
+        {
+          name: "New catalog item",
+          type: "service",
+          description: "Describe this service",
+          published: false,
+        },
+        token,
+      );
+      setRows((prev) => [...prev, created]);
+      toast.success("Catalog item created");
+    } catch {
+      toast.error("Could not create catalog item");
+    }
   };
 
   return (
@@ -44,8 +100,8 @@ export default function AdminCatalogPage() {
         description="Specialties, urgent-care conditions, and service pricing."
         actions={
           <Button
-            className="bg-green-700 hover:bg-green-600"
-            onClick={() => toast.message("Add catalog item — coming soon")}
+            className="bg-green-700 hover:bg-green-600 rounded-2xl"
+            onClick={() => void addItem()}
           >
             Add item
           </Button>
@@ -70,6 +126,8 @@ export default function AdminCatalogPage() {
       <AdminDataTable
         rows={filtered}
         rowKey={(row) => row.id}
+        loading={isFiltering}
+        emptyMessage="No catalog items found."
         columns={[
           {
             key: "name",
@@ -85,7 +143,9 @@ export default function AdminCatalogPage() {
             key: "type",
             header: "Type",
             render: (row) => (
-              <span className="capitalize">{row.type.replace("_", " ")}</span>
+              <span className="capitalize">
+                {String(row.type).replace("_", " ")}
+              </span>
             ),
           },
           {
@@ -93,7 +153,7 @@ export default function AdminCatalogPage() {
             header: "Price",
             render: (row) =>
               row.price != null
-                ? `${row.currency} ${row.price.toLocaleString()}`
+                ? `${row.currency || "NGN"} ${Number(row.price).toLocaleString()}`
                 : "—",
           },
           {
@@ -113,7 +173,7 @@ export default function AdminCatalogPage() {
                 size="sm"
                 variant="outline"
                 className="border-green-700 text-green-700"
-                onClick={() => togglePublished(row.id)}
+                onClick={() => void togglePublished(row)}
               >
                 {row.published ? "Unpublish" : "Publish"}
               </Button>

@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import ChatInterface from "@/components/custom/ChatInterFace";
 import PaymentModal from "@/components/modals/PaymentModal";
 import { AdminPageHeader } from "@/components/admin";
-import { CHAT_ACCESS_KEY } from "@/components/patient/nav";
+import { useAuth } from "@/context/AuthContext";
+import { getChatAccess } from "@/lib/api/payments";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function MessagesPage() {
   return (
@@ -18,30 +21,33 @@ export default function MessagesPage() {
 }
 
 function MessagesContent() {
+  const { token } = useAuth();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    try {
-      setHasAccess(localStorage.getItem(CHAT_ACCESS_KEY) === "true");
-    } catch {
-      setHasAccess(false);
+    if (!token) {
+      setReady(true);
+      return;
     }
-    setReady(true);
-  }, []);
+    getChatAccess(token)
+      .then((res) => setHasAccess(Boolean(res?.entitled)))
+      .catch(() => setHasAccess(false))
+      .finally(() => setReady(true));
+  }, [token]);
 
   const handlePaymentSuccess = () => {
-    try {
-      localStorage.setItem(CHAT_ACCESS_KEY, "true");
-    } catch {
-      // ignore
-    }
     setHasAccess(true);
+    toast.success("Chat access unlocked");
   };
 
   if (!ready) {
-    return <p className="text-sm text-gray-500">Loading messages…</p>;
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-[#1d884a]" />
+      </div>
+    );
   }
 
   if (hasAccess) {
@@ -75,7 +81,7 @@ function MessagesContent() {
             <ul className="list-inside list-disc space-y-1 text-sm text-gray-600">
               <li>One-time chat access unlock (demo): $25</li>
               <li>Text messaging with your care team</li>
-              <li>Access stays on this device until you clear site data</li>
+              <li>Access is saved to your account</li>
             </ul>
             <Button
               className="bg-green-700 hover:bg-green-600"

@@ -104,7 +104,7 @@ function PaymentsContent() {
   return (
     <div>
       <AdminPageHeader
-        title="Payments"
+        title="Manage Payments"
         description="Transactions and chat access entitlements."
       />
 

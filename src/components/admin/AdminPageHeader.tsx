@@ -21,11 +21,13 @@ export function AdminPageHeader({
       )}
     >
       <div>
-        <h1 className="text-xl font-semibold text-[#212529] sm:text-2xl">
+        <h1 className="text-xl font-bold text-[#212529] sm:text-2xl">
           {title}
         </h1>
         {description ? (
-          <p className="mt-1 text-sm text-gray-600">{description}</p>
+          <p className="mt-1 text-sm font-normal text-gray-600">
+            {description}
+          </p>
         ) : null}
       </div>
       {actions ? (

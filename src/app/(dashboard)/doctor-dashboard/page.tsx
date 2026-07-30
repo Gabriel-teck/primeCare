@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Calendar,
@@ -17,44 +17,41 @@ import {
   AdminStatusBadge,
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
-import {
-  mockAdminDmMessages,
-  mockDoctorBookings,
-  mockPatientThreads,
-} from "@/lib/doctor/mock-data";
+import { getUnreadCount } from "@/lib/api/chat";
+import { getDoctorAppointments } from "@/lib/api/appointment";
+import { getDoctorConsultations } from "@/lib/api/consultation";
+import { mapDoctorBookings } from "@/lib/doctor/bookings";
+import type { AdminBooking } from "@/lib/admin/types";
 
 export default function DoctorOverviewPage() {
-  const { user } = useAuth();
-  const today = "2026-07-28";
+  const { user, token } = useAuth();
+  const today = new Date().toISOString().split("T")[0];
+  const [unreadTotal, setUnreadTotal] = useState(0);
+  const [rows, setRows] = useState<AdminBooking[]>([]);
+
+  useEffect(() => {
+    if (!token) return;
+    getUnreadCount(token)
+      .then((res) => setUnreadTotal(res?.count ?? 0))
+      .catch(() => setUnreadTotal(0));
+
+    Promise.all([getDoctorAppointments(token), getDoctorConsultations(token)])
+      .then(([appts, consults]) =>
+        setRows(mapDoctorBookings(appts || [], consults || [])),
+      )
+      .catch(() => setRows([]));
+  }, [token]);
 
   const pending = useMemo(
-    () => mockDoctorBookings.filter((b) => b.status === "pending"),
-    [],
+    () => rows.filter((b) => b.status === "pending"),
+    [rows],
   );
   const todayRows = useMemo(
     () =>
-      mockDoctorBookings
+      rows
         .filter((b) => b.date === today)
         .sort((a, b) => a.time.localeCompare(b.time)),
-    [today],
-  );
-  const unreadPatient = useMemo(
-    () =>
-      mockPatientThreads.reduce(
-        (sum, t) =>
-          sum +
-          t.messages.filter((m) => !m.read && m.senderRole === "patient")
-            .length,
-        0,
-      ),
-    [],
-  );
-  const unreadAdmin = useMemo(
-    () =>
-      mockAdminDmMessages.filter(
-        (m) => !m.read && m.senderRole === "super_admin",
-      ).length,
-    [],
+    [rows, today],
   );
 
   return (
@@ -78,15 +75,15 @@ export default function DoctorOverviewPage() {
           icon={Calendar}
         />
         <AdminStatCard
-          label="Unread patient msgs"
-          value={unreadPatient}
-          hint="Patient inbox"
+          label="Unread messages"
+          value={unreadTotal}
+          hint="Patient & admin inbox"
           icon={MessageSquare}
         />
         <AdminStatCard
-          label="Unread admin msgs"
-          value={unreadAdmin}
-          hint="Platform admin"
+          label="Open chats"
+          value={unreadTotal > 0 ? "Needs reply" : "Clear"}
+          hint="Message center"
           icon={Users}
         />
       </div>
@@ -106,12 +103,12 @@ export default function DoctorOverviewPage() {
             <QueueLink
               href="/doctor-dashboard/messages?tab=patients"
               label="Patient messages"
-              count={unreadPatient}
+              count={unreadTotal}
             />
             <QueueLink
               href="/doctor-dashboard/messages?tab=admin"
               label="Admin messages"
-              count={unreadAdmin}
+              count={0}
             />
           </div>
         </AdminSectionCard>
@@ -141,7 +138,7 @@ export default function DoctorOverviewPage() {
             <ul className="divide-y divide-gray-100">
               {todayRows.map((row) => (
                 <li
-                  key={row.id}
+                  key={`${row.kind}-${row.id}`}
                   className="flex items-center justify-between gap-3 py-3"
                 >
                   <div className="min-w-0">

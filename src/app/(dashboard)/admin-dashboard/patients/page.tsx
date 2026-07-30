@@ -78,7 +78,7 @@ function AdminPatientsContent() {
   return (
     <div>
       <AdminPageHeader
-        title="Patients"
+        title="Manage Patients"
         description="Directory of registered patients on the platform."
       />
 

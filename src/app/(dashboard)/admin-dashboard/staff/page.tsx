@@ -82,11 +82,11 @@ function AdminStaffContent() {
   return (
     <div>
       <AdminPageHeader
-        title="Staff"
+        title="Manage Staff"
         description="Doctors and admins across the platform."
         actions={
           <Button
-            className="bg-green-700 hover:bg-green-600"
+            className="bg-green-700 hover:bg-green-600 rounded-2xl"
             onClick={() => toast.message("Add staff — UI ready for backend")}
           >
             Add staff
@@ -168,7 +168,7 @@ function AdminStaffContent() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="border-green-700 text-green-700"
+                  className="border-green-700 text-green-700 rounded-2xl"
                   onClick={(e) => {
                     e.stopPropagation();
                     router.push(`/admin-dashboard/chat?doctorId=${row.id}`);

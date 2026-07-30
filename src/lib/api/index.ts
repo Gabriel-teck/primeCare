@@ -13,3 +13,4 @@ export * from "./catalog";
 export * from "./payments";
 export * from "./staff";
 export * from "./content";
+export * from "./records";

@@ -10,6 +10,7 @@ import {
 } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "./AuthContext";
+import { SOCKET_URL } from "@/lib/api/config";
 
 interface SocketContextType {
   socket: Socket | null;
@@ -35,7 +36,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     console.log("Socket: Token exists:", !!token);
     console.log("Socket: User exists:", !!user);
 
-    const newSocket = io("http://localhost:3001/chat", {
+    const newSocket = io(`${SOCKET_URL}/chat`, {
       auth: {
         token: token,
       },

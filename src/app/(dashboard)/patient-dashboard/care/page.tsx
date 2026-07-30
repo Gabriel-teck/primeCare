@@ -13,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Download } from "lucide-react";
-import { CHAT_ACCESS_KEY } from "@/components/patient/nav";
+import { getChatAccess, getMyPayments } from "@/lib/api/payments";
+import type { Payment } from "@/types";
 
 type CareTab = "profile" | "records" | "billing";
 
@@ -26,46 +27,6 @@ type ConsultRecord = {
   fileUrl?: string;
   fileName?: string;
 };
-
-type PaymentRow = {
-  paymentMethod: string;
-  date: string;
-  status: string;
-  fee: number;
-  description: string;
-};
-
-const mockBilling: PaymentRow[] = [
-  {
-    paymentMethod: "Card",
-    date: "2025-06-01",
-    status: "Approved",
-    fee: 25,
-    description: "Care team chat unlock",
-  },
-  {
-    paymentMethod: "Card",
-    date: "2025-05-12",
-    status: "Approved",
-    fee: 50,
-    description: "Online consultation fee",
-  },
-  {
-    paymentMethod: "Bank transfer",
-    date: "2025-04-03",
-    status: "Pending",
-    fee: 40,
-    description: "Appointment booking fee",
-  },
-  {
-    paymentMethod: "Card",
-    date: "2024-11-20",
-    status: "Failed",
-    fee: 25,
-    description: "Care team chat unlock",
-  },
-];
-
 export default function MyCarePage() {
   return (
     <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
@@ -90,6 +51,7 @@ function MyCareContent() {
     { id: string; name: string; addedAt: string }[]
   >([]);
   const [chatAccess, setChatAccess] = useState(false);
+  const [billing, setBilling] = useState<Payment[]>([]);
 
   useEffect(() => {
     const next = searchParams.get("tab") as CareTab | null;
@@ -99,20 +61,30 @@ function MyCareContent() {
   }, [searchParams]);
 
   useEffect(() => {
+    if (!token) return;
+    getChatAccess(token)
+      .then((res) => setChatAccess(Boolean(res?.entitled)))
+      .catch(() => setChatAccess(false));
     try {
-      setChatAccess(localStorage.getItem(CHAT_ACCESS_KEY) === "true");
       const raw = localStorage.getItem("primecare-local-records");
       if (raw) setLocalFiles(JSON.parse(raw));
     } catch {
       // ignore
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (!token || tab !== "records") return;
     getMyConsultations(token)
       .then((rows: ConsultRecord[]) => setRecords(rows || []))
       .catch(() => setRecords([]));
+  }, [token, tab]);
+
+  useEffect(() => {
+    if (!token || tab !== "billing") return;
+    getMyPayments(token)
+      .then((rows) => setBilling(rows || []))
+      .catch(() => setBilling([]));
   }, [token, tab]);
 
   const consultFiles = useMemo(
@@ -307,44 +279,44 @@ function MyCareContent() {
       {tab === "billing" ? (
         <AdminSectionCard
           title="Billing history"
-          description="Demo records until live payments are connected."
+          description="Your payment history on PrimeCare."
         >
-          <div className="overflow-x-auto">
-            <table className="min-w-[640px] w-full text-left text-sm">
-              <thead className="border-b bg-gray-50 text-gray-600">
-                <tr>
-                  <th className="px-3 py-3 font-medium">Method</th>
-                  <th className="px-3 py-3 font-medium">Date</th>
-                  <th className="px-3 py-3 font-medium">Description</th>
-                  <th className="px-3 py-3 font-medium">Fee</th>
-                  <th className="px-3 py-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockBilling.map((row, i) => (
-                  <tr key={i} className="border-b last:border-0">
-                    <td className="px-3 py-3">{row.paymentMethod}</td>
-                    <td className="px-3 py-3">{row.date}</td>
-                    <td className="px-3 py-3">{row.description}</td>
-                    <td className="px-3 py-3">${row.fee}</td>
-                    <td className="px-3 py-3">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-medium ${
-                          row.status === "Approved"
-                            ? "bg-green-100 text-green-700"
-                            : row.status === "Pending"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {row.status}
-                      </span>
-                    </td>
+          {billing.length === 0 ? (
+            <p className="text-sm text-gray-500">No payment records yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-[640px] w-full text-left text-sm">
+                <thead className="border-b bg-gray-50 text-gray-600">
+                  <tr>
+                    <th className="px-3 py-3 font-medium">Method</th>
+                    <th className="px-3 py-3 font-medium">Date</th>
+                    <th className="px-3 py-3 font-medium">Description</th>
+                    <th className="px-3 py-3 font-medium">Fee</th>
+                    <th className="px-3 py-3 font-medium">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {billing.map((row) => (
+                    <tr key={row.id} className="border-b last:border-0">
+                      <td className="px-3 py-3">{row.method}</td>
+                      <td className="px-3 py-3">
+                        {row.createdAt
+                          ? new Date(row.createdAt).toLocaleDateString()
+                          : "—"}
+                      </td>
+                      <td className="px-3 py-3">{row.description}</td>
+                      <td className="px-3 py-3">
+                        {row.currency} {Number(row.amount).toLocaleString()}
+                      </td>
+                      <td className="px-3 py-3">
+                        <AdminStatusBadge status={row.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </AdminSectionCard>
       ) : null}
     </div>

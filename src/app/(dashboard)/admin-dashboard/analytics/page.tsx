@@ -5,17 +5,21 @@ import { Calendar, CreditCard, MessageSquare, Users } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getAllAppointments } from "@/lib/api/appointment";
 import { getAllConsultations } from "@/lib/api/consultation";
+import { getUnreadCount } from "@/lib/api/chat";
+import { listPayments } from "@/lib/api/payments";
+import type { Payment } from "@/types";
 import {
   AdminPageHeader,
   AdminSectionCard,
   AdminStatCard,
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
-import { mockDoctorThreads, mockPayments } from "@/lib/admin/mock-data";
 
 export default function AdminAnalyticsPage() {
   const { token } = useAuth();
   const [bookingCount, setBookingCount] = useState(0);
+  const [dmCount, setDmCount] = useState(0);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [statusBreakdown, setStatusBreakdown] = useState<
     Record<string, number>
   >({});
@@ -24,12 +28,16 @@ export default function AdminAnalyticsPage() {
     if (!token) return;
     const load = async () => {
       try {
-        const [appts, consults] = await Promise.all([
+        const [appts, consults, unread, pays] = await Promise.all([
           getAllAppointments(token),
           getAllConsultations(token),
+          getUnreadCount(token),
+          listPayments(token),
         ]);
         const all = [...(appts || []), ...(consults || [])];
         setBookingCount(all.length);
+        setDmCount(unread?.count ?? 0);
+        setPayments(pays || []);
         const breakdown: Record<string, number> = {};
         all.forEach((item: { status?: string }) => {
           const key = item.status || "unknown";
@@ -38,6 +46,8 @@ export default function AdminAnalyticsPage() {
         setStatusBreakdown(breakdown);
       } catch {
         setBookingCount(0);
+        setDmCount(0);
+        setPayments([]);
       }
     };
     void load();
@@ -45,14 +55,10 @@ export default function AdminAnalyticsPage() {
 
   const paidRevenue = useMemo(
     () =>
-      mockPayments
+      payments
         .filter((p) => p.status === "paid")
-        .reduce((sum, p) => sum + p.amount, 0),
-    [],
-  );
-  const dmCount = mockDoctorThreads.reduce(
-    (sum, t) => sum + t.messages.length,
-    0,
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0),
+    [payments],
   );
 
   const exportCsv = () => {
@@ -92,18 +98,18 @@ export default function AdminAnalyticsPage() {
           icon={Calendar}
         />
         <AdminStatCard
-          label="Doctor DM volume"
+          label="Unread messages"
           value={dmCount}
           icon={MessageSquare}
         />
         <AdminStatCard
-          label="Paid revenue (mock)"
+          label="Paid revenue"
           value={`NGN ${paidRevenue.toLocaleString()}`}
           icon={CreditCard}
         />
         <AdminStatCard
           label="Payment records"
-          value={mockPayments.length}
+          value={payments.length}
           icon={Users}
         />
       </div>

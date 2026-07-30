@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { doctorNavItems, isDoctorNavActive } from "@/components/doctor/nav";
+import { useUnreadBadge } from "@/hooks/useUnreadBadge";
 
 interface DoctorDashboardSidebarProps {
   isOpen?: boolean;
@@ -15,12 +16,14 @@ export default function DoctorDashboardSidebar({
   onClose,
 }: DoctorDashboardSidebarProps) {
   const pathname = usePathname();
+  const { count: unreadMessages } = useUnreadBadge();
 
   const NavLinks = ({ onNavigate }: { onNavigate?: () => void }) => (
     <nav className="space-y-1 px-3 py-4">
       {doctorNavItems.map((item) => {
         const Icon = item.icon;
         const active = isDoctorNavActive(pathname, item.href);
+        const showBadge = item.href.endsWith("/messages") && unreadMessages > 0;
         return (
           <Link
             key={item.href}
@@ -28,12 +31,17 @@ export default function DoctorDashboardSidebar({
             onClick={onNavigate}
             className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
               active
-                ? "border-r-2 border-green-700 bg-green-50 font-medium text-green-700"
+                ? "bg-green-50 font-medium text-green-700"
                 : "text-gray-700 hover:bg-gray-50"
             }`}
           >
             <Icon className="h-5 w-5 shrink-0" />
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {showBadge ? (
+              <span className="rounded-full bg-green-700 px-2 py-0.5 text-[10px] font-semibold text-white">
+                {unreadMessages}
+              </span>
+            ) : null}
           </Link>
         );
       })}
@@ -42,7 +50,7 @@ export default function DoctorDashboardSidebar({
 
   return (
     <>
-      <aside className="fixed left-0 top-0 z-30 hidden h-full w-60 border-r border-gray-200 bg-white shadow-sm lg:block">
+      <aside className="fixed left-0 top-0 z-30 hidden h-full w-60 border-r border-gray-200 bg-white lg:block">
         <div className="px-5 pt-6">
           <Link href="/">
             <span className="text-xl font-bold md:text-2xl">prime</span>

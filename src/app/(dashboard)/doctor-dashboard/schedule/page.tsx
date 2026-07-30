@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { AdminBooking } from "@/lib/admin/types";
 import {
@@ -13,7 +13,17 @@ import {
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { mockDoctorBookings } from "@/lib/doctor/mock-data";
+import { useAuth } from "@/context/AuthContext";
+import {
+  getDoctorAppointments,
+  updateAppointment,
+} from "@/lib/api/appointment";
+import {
+  getDoctorConsultations,
+  updateConsultation,
+} from "@/lib/api/consultation";
+import { bookingRouteId, mapDoctorBookings } from "@/lib/doctor/bookings";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 export default function DoctorSchedulePage() {
   return (
@@ -24,17 +34,42 @@ export default function DoctorSchedulePage() {
 }
 
 function DoctorScheduleContent() {
+  const { token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [rows, setRows] = useState<AdminBooking[]>(mockDoctorBookings);
+  const [rows, setRows] = useState<AdminBooking[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState(searchParams.get("status") || "all");
   const [kind, setKind] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const debouncedSearch = useDebouncedValue(search, 300);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const [appts, consults] = await Promise.all([
+        getDoctorAppointments(token),
+        getDoctorConsultations(token),
+      ]);
+      setRows(mapDoctorBookings(appts || [], consults || []));
+    } catch {
+      toast.error("Failed to load schedule");
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const filtered = useMemo(() => {
+    const q = debouncedSearch.toLowerCase();
     return rows
       .filter((row) => {
-        const q = search.toLowerCase();
         const matchesSearch =
           !q ||
           row.fullName.toLowerCase().includes(q) ||
@@ -45,13 +80,28 @@ function DoctorScheduleContent() {
         return matchesSearch && matchesStatus && matchesKind;
       })
       .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
-  }, [rows, search, status, kind]);
+  }, [rows, debouncedSearch, status, kind]);
 
-  const updateStatus = (id: string, next: string) => {
-    setRows((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: next } : r)),
-    );
-    toast.success(`Marked as ${next}`);
+  const isFiltering = search !== debouncedSearch || loading;
+
+  const updateStatus = async (row: AdminBooking, next: string) => {
+    if (!token) return;
+    setBusyId(row.id);
+    try {
+      if (row.kind === "consultation") {
+        await updateConsultation(row.id, { status: next }, token);
+      } else {
+        await updateAppointment(row.id, { status: next }, token);
+      }
+      setRows((prev) =>
+        prev.map((r) => (r.id === row.id ? { ...r, status: next } : r)),
+      );
+      toast.success(`Marked as ${next}`);
+    } catch {
+      toast.error("Could not update status");
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
@@ -94,10 +144,11 @@ function DoctorScheduleContent() {
 
       <AdminDataTable
         rows={filtered}
-        rowKey={(row) => row.id}
+        rowKey={(row) => bookingRouteId(row)}
+        loading={isFiltering}
         emptyMessage="No bookings found."
         onRowClick={(row) =>
-          router.push(`/doctor-dashboard/schedule/${row.id}`)
+          router.push(`/doctor-dashboard/schedule/${bookingRouteId(row)}`)
         }
         columns={[
           {
@@ -148,7 +199,8 @@ function DoctorScheduleContent() {
                   <Button
                     size="sm"
                     className="h-7 bg-green-700 px-2 text-xs hover:bg-green-600"
-                    onClick={() => updateStatus(row.id, "confirmed")}
+                    disabled={busyId === row.id}
+                    onClick={() => void updateStatus(row, "confirmed")}
                   >
                     Confirm
                   </Button>
@@ -158,7 +210,8 @@ function DoctorScheduleContent() {
                     size="sm"
                     variant="outline"
                     className="h-7 px-2 text-xs"
-                    onClick={() => updateStatus(row.id, "completed")}
+                    disabled={busyId === row.id}
+                    onClick={() => void updateStatus(row, "completed")}
                   >
                     Complete
                   </Button>
@@ -168,7 +221,8 @@ function DoctorScheduleContent() {
                     size="sm"
                     variant="ghost"
                     className="h-7 px-2 text-xs text-red-600"
-                    onClick={() => updateStatus(row.id, "cancelled")}
+                    disabled={busyId === row.id}
+                    onClick={() => void updateStatus(row, "cancelled")}
                   >
                     Cancel
                   </Button>

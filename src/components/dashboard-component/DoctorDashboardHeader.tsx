@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { LogOut, Menu, X, User } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -14,15 +14,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
-import { getDoctorPageTitle } from "@/components/doctor/nav";
 import DoctorDashboardSidebar from "./DoctorDashboardSidebar";
 
 export default function DoctorDashboardHeader() {
   const [showSidebar, setShowSidebar] = useState(false);
-  const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
-  const pageTitle = getDoctorPageTitle(pathname);
   const initials =
     user?.fullName
       ?.split(" ")
@@ -53,30 +50,22 @@ export default function DoctorDashboardHeader() {
           </button>
         </div>
 
-        <div className="hidden min-w-0 text-[20px] font-semibold text-[#212529] lg:block">
-          {pageTitle}
-        </div>
-
-        <div className="min-w-0 flex-1 truncate text-center lg:hidden">
-          <h1 className="truncate text-base font-semibold text-[#1d884a] sm:text-lg">
-            {pageTitle}
-          </h1>
-        </div>
+        <div className="hidden flex-1 lg:block" />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="flex items-center gap-2 px-2 hover:bg-green-50"
+              className="ml-auto flex items-center gap-2 px-2 hover:bg-green-50"
             >
               <span className="hidden max-w-[160px] truncate text-sm font-semibold text-[#212529] sm:inline">
                 {user?.fullName || "Doctor"}
               </span>
-              <Avatar className="h-8 w-8">
+              {/* <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-green-100 text-green-700">
                   {initials}
                 </AvatarFallback>
-              </Avatar>
+              </Avatar> */}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
