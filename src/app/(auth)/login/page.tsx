@@ -2,10 +2,10 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth, dashboardForRole } from "@/context/AuthContext";
@@ -16,8 +16,15 @@ import type { z } from "zod";
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-export default function Login() {
+function safeNextPath(raw: string | null) {
+  if (!raw) return null;
+  if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login: authLogin } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -36,6 +43,17 @@ export default function Login() {
     try {
       const loggedInUser = await authLogin(data.email, data.password);
       toast.success("Welcome back");
+
+      const next = safeNextPath(searchParams.get("next"));
+      if (next && loggedInUser.role === "patient") {
+        router.replace(next);
+        return;
+      }
+
+      if (next && loggedInUser.role !== "patient") {
+        toast.message("Booking is for patient accounts.");
+      }
+
       router.replace(dashboardForRole(loggedInUser.role));
     } catch (err: unknown) {
       toast.error(
@@ -138,5 +156,13 @@ export default function Login() {
         </div>
       </div>
     </section>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f8f9fa]" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

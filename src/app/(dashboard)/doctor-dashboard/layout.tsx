@@ -17,6 +17,10 @@ const gabarito = Gabarito({
 export const metadata: Metadata = {
   title: "PrimeCare Doctor",
   description: "PrimeCare doctor clinical console",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default function DoctorLayout({

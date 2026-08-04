@@ -10,6 +10,8 @@ export * from "./consultation";
 export * from "./bookings";
 export * from "./chat";
 export * from "./catalog";
+export * from "./media";
+export * from "./contact";
 export * from "./payments";
 export * from "./staff";
 export * from "./records";

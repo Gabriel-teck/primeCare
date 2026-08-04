@@ -25,6 +25,7 @@ import {
   updateCatalogItem,
   deleteCatalogItem,
 } from "@/lib/api/catalog";
+import { resolveMediaUrl } from "@/lib/api/media";
 import type { CatalogItem } from "@/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { Eye, EyeOff, MoreVertical, Pencil, Trash2 } from "lucide-react";
@@ -147,15 +148,26 @@ export default function AdminCatalogPage() {
                 words.length > 100
                   ? `${words.slice(0, 100).join(" ")}…`
                   : row.description;
+              const thumb = row.imageUrl ? resolveMediaUrl(row.imageUrl) : null;
               return (
-                <div className="min-w-0">
-                  <p className="font-medium truncate">{row.name}</p>
-                  <p
-                    className="text-xs text-gray-500 line-clamp-2"
-                    title={row.description}
-                  >
-                    {description}
-                  </p>
+                <div className="flex min-w-0 items-start gap-3">
+                  {thumb ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- small admin list thumbnail
+                    <img
+                      src={thumb}
+                      alt=""
+                      className="mt-0.5 h-10 w-10 shrink-0 rounded object-cover border border-gray-200"
+                    />
+                  ) : null}
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{row.name}</p>
+                    <p
+                      className="text-xs text-gray-500 line-clamp-2"
+                      title={row.description}
+                    >
+                      {description}
+                    </p>
+                  </div>
                 </div>
               );
             },

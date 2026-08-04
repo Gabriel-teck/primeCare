@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import Carousel from "@/components/custom/Carousel";
 import Howitworks from "@/components/landing-component/Howitworks";
+import UrgentCareConditions from "@/components/landing-component/UrgentCareConditions";
+import ContactUs from "@/components/landing-component/ContactUs";
+import BookAppointmentButton from "@/components/landing-component/BookAppointmentButton";
 import TestimonialsCarousel from "@/components/ui/TestimonialCarousel";
 
 export default function Home() {
@@ -44,7 +47,7 @@ export default function Home() {
               </div>
 
               {/* Desktop-only search bar */}
-              <div className="relative hidden md:block pt-4">
+              {/* <div className="relative hidden md:block pt-4">
                 <form className="space-y-2">
                   <div className="relative">
                     <Input
@@ -62,7 +65,7 @@ export default function Home() {
                     Search <ChevronRight className="w-4 h-4" />
                   </Button>
                 </form>
-              </div>
+              </div> */}
             </div>
 
             {/* Hero Image */}
@@ -121,13 +124,7 @@ export default function Home() {
                 <br></br>
                 <span className="font-bold">Whenever! Wherever! Anywhere!</span>
               </p>
-              <Button
-                variant="outline"
-                size="xl"
-                className="mt-[26px] rounded-full px-12 text-md md:text-lg bg-green-700 text-white hover:text-white hover:text-lg hover:bg-green-700 flex items-center gap-4"
-              >
-                Book <ChevronRight className="w-4 h-4" />
-              </Button>
+              <BookAppointmentButton />
             </div>
           </div>
         </section>
@@ -173,21 +170,7 @@ export default function Home() {
             </div>
 
             {/* List of bookings */}
-            <div className="grid md:grid-cols-3 gap-2 md:gap-x-4 mt-8">
-              {Array.from({ length: 12 }).map((_, index) => (
-                <Button
-                  key={index}
-                  variant="ghost"
-                  size="xl"
-                  className="bg-[#ffff] text-[16px] font-bold leading-5 text-left text-[rgb(29,136,74)] flex justify-between border-1 border-[rgb(29,136,74)] rounded-[50px] pt-[16px] pr-[20px] pb-[15px] pl-[25px]"
-                >
-                  Malaria
-                  <span className="rounded-full bg-green-100 p-0.5">
-                    <ChevronRight />
-                  </span>
-                </Button>
-              ))}
-            </div>
+            <UrgentCareConditions />
           </div>
         </section>
 
@@ -264,6 +247,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        <ContactUs />
       </main>
     </>
   );

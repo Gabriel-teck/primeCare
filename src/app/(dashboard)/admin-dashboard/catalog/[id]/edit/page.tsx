@@ -66,6 +66,7 @@ export default function AdminCatalogEditPage() {
         price: item.price != null ? String(item.price) : "",
         currency: item.currency || "NGN",
         published: item.published,
+        imageUrl: item.imageUrl ?? null,
       }}
     />
   );

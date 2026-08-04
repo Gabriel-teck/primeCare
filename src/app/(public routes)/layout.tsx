@@ -5,6 +5,7 @@ import Providers from "../providers";
 import Header from "@/components/landing-component/Header";
 import { Footer } from "@/components/landing-component/Footer";
 import { AuthProvider } from "@/context/AuthContext";
+import { Toaster } from "@/components/ui/sonner";
 
 const gabarito = Gabarito({
   subsets: ["latin"],
@@ -14,6 +15,10 @@ const gabarito = Gabarito({
 export const metadata: Metadata = {
   title: "PrimeCare",
   description: "An Online Medic-care",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default function RootLayout({
@@ -28,6 +33,7 @@ export default function RootLayout({
           <Header />
           <Providers>{children}</Providers>
           <Footer />
+          <Toaster />
         </AuthProvider>
       </body>
     </html>

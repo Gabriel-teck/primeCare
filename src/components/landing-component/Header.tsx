@@ -87,17 +87,26 @@ export default function Header() {
           >
             About us
           </Link>
+          <Link
+            href="/#contact"
+            className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
+          >
+            Contact Us
+          </Link>
 
           {/* Conditional rendering based on authentication */}
           {user ? (
             // Authenticated user - show dropdown
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="flex items-center rounded-3xl"
+                >
                   <User className="h-4 w-4" />
-                  <span className="hidden md:inline">
+                  {/* <span className="hidden md:inline">
                     {user.fullName || user.email}
-                  </span>
+                  </span> */}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -205,6 +214,13 @@ export default function Header() {
                 onClick={() => setShowNavBar(false)}
               >
                 About us
+              </Link>
+              <Link
+                href="/#contact"
+                className="text-lg py-2 hover:text-green-600 transition-colors"
+                onClick={() => setShowNavBar(false)}
+              >
+                Contact Us
               </Link>
 
               {/* Mobile authentication buttons */}
