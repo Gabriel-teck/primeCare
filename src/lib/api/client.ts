@@ -114,4 +114,10 @@ export const api = {
     formData: FormData,
     options?: Omit<ApiRequestOptions, "method" | "body" | "formData">,
   ) => apiRequest<T>(path, { ...options, method: "POST", formData }),
+
+  patchForm: <T>(
+    path: string,
+    formData: FormData,
+    options?: Omit<ApiRequestOptions, "method" | "body" | "formData">,
+  ) => apiRequest<T>(path, { ...options, method: "PATCH", formData }),
 };

@@ -97,11 +97,6 @@ function MyCareContent() {
     router.replace(`/patient-dashboard/care?tab=${next}`);
   };
 
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-  };
-
   const addLocalFile = (file?: File | null) => {
     if (!file) return;
     const next = [
@@ -194,9 +189,6 @@ function MyCareContent() {
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline">
                 <a href="/patient-dashboard/messages">Open Messages</a>
-              </Button>
-              <Button variant="outline" onClick={handleLogout}>
-                Log out
               </Button>
             </div>
           </AdminSectionCard>

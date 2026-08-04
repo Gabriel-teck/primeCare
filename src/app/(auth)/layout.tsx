@@ -14,6 +14,10 @@ const gabarito = Gabarito({
 export const metadata: Metadata = {
   title: "PrimeCare",
   description: "An Online Medic-care",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default function AuthLayout({

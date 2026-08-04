@@ -7,6 +7,7 @@ export type CatalogItem = {
   description: string;
   price?: number | null;
   currency?: string | null;
+  imageUrl?: string | null;
   published: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -19,6 +20,7 @@ export type CreateCatalogPayload = {
   price?: number | null;
   currency?: string;
   published?: boolean;
+  image?: File | null;
 };
 
 export type UpdateCatalogPayload = Partial<CreateCatalogPayload>;

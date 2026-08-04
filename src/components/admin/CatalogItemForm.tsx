@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Loader2, X } from "lucide-react";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { getErrorMessage } from "@/lib/api/errors";
 import { createCatalogItem, updateCatalogItem } from "@/lib/api/catalog";
+import { resolveMediaUrl } from "@/lib/api/media";
 import { cn } from "@/lib/utils";
 import type { CatalogType } from "@/types";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ export type CatalogFormValues = {
   price: string;
   currency: string;
   published: boolean;
+  imageUrl?: string | null;
 };
 
 const TYPE_OPTIONS: { label: string; value: CatalogType }[] = [
@@ -47,6 +49,8 @@ export function CatalogItemForm({
   const router = useRouter();
   const { token } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [values, setValues] = useState<CatalogFormValues>({
     type: initialValues?.type || "specialty",
     name: initialValues?.name || "",
@@ -57,9 +61,11 @@ export function CatalogItemForm({
         : "",
     currency: initialValues?.currency || "NGN",
     published: initialValues?.published ?? false,
+    imageUrl: initialValues?.imageUrl ?? null,
   });
 
   const isService = values.type === "service";
+  const isSpecialty = values.type === "specialty";
   const title = mode === "create" ? "Add catalog item" : "Edit catalog item";
   const subtitle =
     mode === "create"
@@ -68,13 +74,26 @@ export function CatalogItemForm({
 
   const typeHint = useMemo(() => {
     if (values.type === "specialty") {
-      return "Specialties appear in doctor and appointment specialty lists.";
+      return "Specialties appear on the landing page and in doctor specialty lists. An image is required.";
     }
     if (values.type === "urgent_care") {
       return "Urgent-care items describe conditions patients can book for.";
     }
     return "Services include pricing shown in care and billing flows.";
   }, [values.type]);
+
+  useEffect(() => {
+    if (!imageFile) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(imageFile);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
+
+  const displayImage =
+    previewUrl || (values.imageUrl ? resolveMediaUrl(values.imageUrl) : null);
 
   const setField = <K extends keyof CatalogFormValues>(
     key: K,
@@ -97,6 +116,13 @@ export function CatalogItemForm({
       toast.error("Enter a valid service price");
       return;
     }
+    if (isSpecialty) {
+      const hasImage = Boolean(imageFile) || Boolean(values.imageUrl);
+      if (!hasImage) {
+        toast.error("Specialty items require an image");
+        return;
+      }
+    }
 
     const payload = {
       name: values.name.trim(),
@@ -105,6 +131,7 @@ export function CatalogItemForm({
       published: values.published,
       currency: isService ? values.currency : "NGN",
       price: isService ? Number(values.price) : null,
+      image: imageFile,
     };
 
     setSaving(true);
@@ -264,6 +291,34 @@ export function CatalogItemForm({
                 </select>
               </div>
             </>
+          ) : null}
+
+          {isSpecialty ? (
+            <div className="sm:col-span-2">
+              <label htmlFor="catalog-image" className={labelClass}>
+                Specialty image <span className="text-red-600">*</span>
+              </label>
+              <Input
+                id="catalog-image"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+                className={cn(
+                  fieldClass,
+                  "cursor-pointer py-1.5 file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-green-50 file:px-3 file:py-1 file:text-sm file:font-medium file:text-green-800 shadow-none",
+                )}
+                required={mode === "create" || !values.imageUrl}
+                disabled={saving}
+              />
+              {displayImage ? (
+                // eslint-disable-next-line @next/next/no-img-element -- preview of local/uploaded specialty image
+                <img
+                  src={displayImage}
+                  alt="Specialty preview"
+                  className="mt-3 h-24 w-24 rounded object-cover border border-gray-200"
+                />
+              ) : null}
+            </div>
           ) : null}
 
           <div className="sm:col-span-2">

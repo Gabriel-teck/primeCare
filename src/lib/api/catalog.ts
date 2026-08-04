@@ -5,6 +5,20 @@ import type {
   UpdateCatalogPayload,
 } from "@/types";
 
+function appendCatalogFields(
+  formData: FormData,
+  data: CreateCatalogPayload | UpdateCatalogPayload,
+) {
+  Object.entries(data).forEach(([key, value]) => {
+    if (key === "image" || value === undefined) return;
+    if (value === null) {
+      formData.append(key, "");
+      return;
+    }
+    formData.append(key, String(value));
+  });
+}
+
 export async function listCatalog() {
   return api.get<CatalogItem[]>("/catalog");
 }
@@ -17,7 +31,18 @@ export async function createCatalogItem(
   data: CreateCatalogPayload,
   token: string | null,
 ) {
-  return api.post<CatalogItem>("/catalog", data, { token, auth: true });
+  if (data.image) {
+    const formData = new FormData();
+    appendCatalogFields(formData, data);
+    formData.append("image", data.image);
+    return api.postForm<CatalogItem>("/catalog", formData, {
+      token,
+      auth: true,
+    });
+  }
+
+  const { image: _image, ...json } = data;
+  return api.post<CatalogItem>("/catalog", json, { token, auth: true });
 }
 
 export async function updateCatalogItem(
@@ -25,7 +50,18 @@ export async function updateCatalogItem(
   data: UpdateCatalogPayload,
   token: string | null,
 ) {
-  return api.patch<CatalogItem>(`/catalog/${id}`, data, { token, auth: true });
+  if (data.image) {
+    const formData = new FormData();
+    appendCatalogFields(formData, data);
+    formData.append("image", data.image);
+    return api.patchForm<CatalogItem>(`/catalog/${id}`, formData, {
+      token,
+      auth: true,
+    });
+  }
+
+  const { image: _image, ...json } = data;
+  return api.patch<CatalogItem>(`/catalog/${id}`, json, { token, auth: true });
 }
 
 export async function deleteCatalogItem(id: string, token: string | null) {

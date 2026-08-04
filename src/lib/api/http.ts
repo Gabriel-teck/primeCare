@@ -87,8 +87,12 @@ http.interceptors.response.use(
       );
     }
 
+    const base = API_BASE_URL;
     return Promise.reject(
-      new ApiError(0, error.message || "Network error. Check your connection."),
+      new ApiError(
+        0,
+        `Cannot reach the API at ${base}. Make sure the backend is running.`,
+      ),
     );
   },
 );
