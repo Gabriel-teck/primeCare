@@ -9,8 +9,15 @@ import {
   AdminStatusBadge,
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { resolveMediaUrl } from "@/lib/api/media";
 import {
   getDoctorAppointments,
   updateAppointment,
@@ -29,7 +36,12 @@ import {
   ConsultationCallActions,
   isConsultationCallable,
 } from "@/components/calls/ConsultationCallActions";
-import { Loader2 } from "lucide-react";
+import { Download, FileText, Loader2 } from "lucide-react";
+
+function isImageFile(fileName?: string | null, fileUrl?: string | null) {
+  const name = (fileName || fileUrl || "").toLowerCase();
+  return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name);
+}
 
 export default function DoctorScheduleDetailPage() {
   const params = useParams();
@@ -41,6 +53,7 @@ export default function DoctorScheduleDetailPage() {
   const [booking, setBooking] = useState<AdminBooking | undefined>();
   const [related, setRelated] = useState<AdminBooking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (!token || !parsed) {
@@ -121,20 +134,20 @@ export default function DoctorScheduleDetailPage() {
     }
   };
 
+  const attachmentUrl = booking.fileUrl ? resolveMediaUrl(booking.fileUrl) : "";
+  const attachmentLabel = booking.fileName || "Attached file";
+  const attachmentIsImage = isImageFile(booking.fileName, booking.fileUrl);
+
   return (
     <div>
-      <AdminPageHeader
-        title={booking.fullName}
-        description={`${booking.kind} · ${booking.date} at ${booking.time}`}
-        actions={
-          <Button
-            variant="outline"
-            onClick={() => router.push("/doctor-dashboard/schedule")}
-          >
-            Back
-          </Button>
-        }
-      />
+      <div className="mb-6 flex justify-start">
+        <Button
+          variant="outline"
+          onClick={() => router.push("/doctor-dashboard/schedule")}
+        >
+          Back
+        </Button>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <AdminSectionCard title="Details" className="lg:col-span-2">
@@ -228,6 +241,78 @@ export default function DoctorScheduleDetailPage() {
             ) : (
               <p className="text-sm text-gray-500">
                 Calls are available once this consultation is confirmed.
+              </p>
+            )}
+          </AdminSectionCard>
+        ) : null}
+
+        {booking.kind === "consultation" ? (
+          <AdminSectionCard
+            title="Patient attachment"
+            className="lg:col-span-3"
+          >
+            {attachmentUrl ? (
+              attachmentIsImage ? (
+                <div className="space-y-3">
+                  <p
+                    className="truncate text-sm text-gray-600"
+                    title={attachmentLabel}
+                  >
+                    {attachmentLabel}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewOpen(true)}
+                    className="group relative max-w-md overflow-hidden rounded-lg border border-gray-200 bg-gray-50 text-left"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={attachmentUrl}
+                      alt={attachmentLabel}
+                      className="max-h-72 w-full object-contain transition group-hover:opacity-95"
+                    />
+                    <span className="absolute inset-x-0 bottom-0 bg-black/50 px-3 py-1.5 text-xs text-white opacity-0 transition group-hover:opacity-100">
+                      Click to enlarge
+                    </span>
+                  </button>
+                  <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+                    <DialogContent className="max-w-3xl border-none bg-transparent p-2 shadow-none sm:p-4">
+                      <DialogHeader className="sr-only">
+                        <DialogTitle>{attachmentLabel}</DialogTitle>
+                      </DialogHeader>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={attachmentUrl}
+                        alt={attachmentLabel}
+                        className="max-h-[85vh] w-full rounded-lg object-contain"
+                      />
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                  <FileText className="h-5 w-5 shrink-0 text-green-700" />
+                  <span
+                    className="min-w-0 flex-1 truncate text-sm text-[#212529]"
+                    title={attachmentLabel}
+                  >
+                    {attachmentLabel}
+                  </span>
+                  <Button asChild size="sm" variant="outline">
+                    <a
+                      href={attachmentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Download className="mr-1.5 h-4 w-4" />
+                      Open
+                    </a>
+                  </Button>
+                </div>
+              )
+            ) : (
+              <p className="text-sm text-gray-500">
+                No file was uploaded with this consultation.
               </p>
             )}
           </AdminSectionCard>
