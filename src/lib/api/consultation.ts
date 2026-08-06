@@ -34,14 +34,29 @@ export async function bookConsultation(
   });
 }
 
-export async function getMyConsultations(token: string | null) {
-  return api.get<Consultation[]>("/consultations/my", { token, auth: true });
+export async function getMyConsultations(
+  token: string | null,
+  status?: string,
+) {
+  return api.get<Consultation[]>("/consultations/my", {
+    token,
+    auth: true,
+    query: {
+      status: status && status !== "all" ? status : undefined,
+    },
+  });
 }
 
-export async function getDoctorConsultations(token: string | null) {
+export async function getDoctorConsultations(
+  token: string | null,
+  status?: string,
+) {
   return api.get<Consultation[]>("/consultations/doctor/my", {
     token,
     auth: true,
+    query: {
+      status: status && status !== "all" ? status : undefined,
+    },
   });
 }
 
@@ -65,8 +80,17 @@ export async function rescheduleConsultation(
   });
 }
 
-export async function getAllConsultations(token: string | null) {
-  return api.get<Consultation[]>("/consultations", { token, auth: true });
+export async function getAllConsultations(
+  token: string | null,
+  status?: string,
+) {
+  return api.get<Consultation[]>("/consultations", {
+    token,
+    auth: true,
+    query: {
+      status: status && status !== "all" ? status : undefined,
+    },
+  });
 }
 
 export async function updateConsultation(

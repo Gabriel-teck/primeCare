@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { AdminBooking } from "@/lib/admin/types";
 import {
@@ -12,6 +13,13 @@ import {
   AdminStatusBadge,
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -24,17 +32,38 @@ import {
 } from "@/lib/api/consultation";
 import { bookingRouteId, mapDoctorBookings } from "@/lib/doctor/bookings";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import {
+  ConsultationCallActions,
+  isConsultationCallable,
+} from "@/components/calls/ConsultationCallActions";
+import {
+  Ban,
+  CheckCircle2,
+  Eye,
+  Loader2,
+  MoreVertical,
+  CircleCheck,
+} from "lucide-react";
 
 export default function DoctorSchedulePage() {
   return (
-    <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
+    <Suspense
+      fallback={
+        <div className="flex justify-center py-10">
+          <Loader2
+            className="h-8 w-8 animate-spin text-[#1d884a]"
+            aria-label="Loading"
+          />
+        </div>
+      }
+    >
       <DoctorScheduleContent />
     </Suspense>
   );
 }
 
 function DoctorScheduleContent() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<AdminBooking[]>([]);
@@ -108,7 +137,7 @@ function DoctorScheduleContent() {
     <div>
       <AdminPageHeader
         title="Schedule"
-        description="Manage appointments and video consultations in one place."
+        description="Manage appointments and online consultations in one place."
       />
 
       <AdminFilterBar columns={3}>
@@ -188,47 +217,118 @@ function DoctorScheduleContent() {
             render: (row) => <AdminStatusBadge status={row.status} />,
           },
           {
-            key: "actions",
-            header: "Actions",
+            key: "call",
+            header: "Call",
+            className: "text-center",
             render: (row) => (
               <div
-                className="flex flex-wrap gap-1"
+                className="flex justify-center"
                 onClick={(e) => e.stopPropagation()}
               >
-                {row.status === "pending" ? (
-                  <Button
+                {row.kind === "consultation" &&
+                isConsultationCallable(row.status, user?.id) ? (
+                  <ConsultationCallActions
+                    consultationId={row.id}
+                    enabled
                     size="sm"
-                    className="h-7 bg-green-700 px-2 text-xs hover:bg-green-600"
-                    disabled={busyId === row.id}
-                    onClick={() => void updateStatus(row, "confirmed")}
-                  >
-                    Confirm
-                  </Button>
-                ) : null}
-                {row.status === "confirmed" || row.status === "pending" ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 px-2 text-xs"
-                    disabled={busyId === row.id}
-                    onClick={() => void updateStatus(row, "completed")}
-                  >
-                    Complete
-                  </Button>
-                ) : null}
-                {row.status !== "cancelled" && row.status !== "completed" ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-xs text-red-600"
-                    disabled={busyId === row.id}
-                    onClick={() => void updateStatus(row, "cancelled")}
-                  >
-                    Cancel
-                  </Button>
-                ) : null}
+                    consultationType={row.typeLabel}
+                    remoteName={row.fullName}
+                    className="inline-flex flex-wrap justify-center gap-2"
+                  />
+                ) : (
+                  <span className="text-xs text-gray-400">
+                    {row.kind === "consultation"
+                      ? row.status === "pending"
+                        ? "After confirmation"
+                        : "—"
+                      : "—"}
+                  </span>
+                )}
               </div>
             ),
+          },
+          {
+            key: "actions",
+            header: "Actions",
+            className: "w-12",
+            render: (row) => {
+              const detailHref = `/doctor-dashboard/schedule/${bookingRouteId(row)}`;
+              const canConfirm = row.status === "pending";
+              const canComplete =
+                row.status === "confirmed" || row.status === "pending";
+              const canCancel =
+                row.status !== "cancelled" && row.status !== "completed";
+
+              return (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 cursor-pointer text-gray-600 hover:bg-green-50 hover:text-green-700"
+                        aria-label="Open actions"
+                        disabled={busyId === row.id}
+                      >
+                        {busyId === row.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <MoreVertical className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuItem
+                        asChild
+                        className="cursor-pointer gap-3"
+                      >
+                        <Link href={detailHref}>
+                          <Eye className="h-4 w-4 text-green-700" />
+                          View
+                        </Link>
+                      </DropdownMenuItem>
+                      {canConfirm ? (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="cursor-pointer gap-3"
+                            onClick={() => void updateStatus(row, "confirmed")}
+                          >
+                            <CheckCircle2 className="h-4 w-4 text-green-700" />
+                            Confirm
+                          </DropdownMenuItem>
+                        </>
+                      ) : null}
+                      {canComplete ? (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="cursor-pointer gap-3"
+                            onClick={() => void updateStatus(row, "completed")}
+                          >
+                            <CircleCheck className="h-4 w-4 text-green-700" />
+                            Complete
+                          </DropdownMenuItem>
+                        </>
+                      ) : null}
+                      {canCancel ? (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="cursor-pointer gap-3 text-red-600 focus:bg-red-50 focus:text-red-700"
+                            onClick={() => void updateStatus(row, "cancelled")}
+                          >
+                            <Ban className="h-4 w-4" />
+                            Cancel
+                          </DropdownMenuItem>
+                        </>
+                      ) : null}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              );
+            },
           },
         ]}
       />
