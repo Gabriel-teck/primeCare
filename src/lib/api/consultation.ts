@@ -1,12 +1,20 @@
 import { api } from "./client";
 import type {
   Consultation,
+  ConsultationDoctor,
   ConsultationPayload,
   ReschedulePayload,
   UpdateConsultationPayload,
 } from "@/types";
 
 export type { ConsultationPayload } from "@/types";
+
+export async function listConsultationDoctors(token: string | null) {
+  return api.get<ConsultationDoctor[]>("/consultations/doctors", {
+    token,
+    auth: true,
+  });
+}
 
 export async function bookConsultation(
   data: ConsultationPayload,

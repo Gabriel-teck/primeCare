@@ -15,10 +15,11 @@ import {
   XCircle,
   RefreshCcw,
   Download,
-  ExternalLink,
-  Copy,
 } from "lucide-react";
-import { toast } from "sonner";
+import {
+  ConsultationCallActions,
+  isConsultationCallable,
+} from "@/components/calls/ConsultationCallActions";
 
 type Consultation = {
   id: string;
@@ -30,6 +31,7 @@ type Consultation = {
   time: string;
   reason: string;
   status: string;
+  doctorId?: string;
   googleMeetLink?: string;
   fileUrl?: string;
   fileName?: string;
@@ -151,7 +153,7 @@ export default function ConsultationHistory() {
             <th className="p-2 text-left">Status</th>
             <th className="p-2 text-left">Reason</th>
             <th className="p-2 text-left">File</th>
-            <th className="p-2 text-left">Video</th>
+            <th className="p-2 text-left">Call</th>
             <th className="p-2 text-left">Actions</th>
           </tr>
         </thead>
@@ -186,9 +188,9 @@ export default function ConsultationHistory() {
                 <td className="p-2">{c.consultationType}</td>
                 <td className="p-2">
                   <StatusBadge status={c.status} />
-                  {c.status === "confirmed" && c.googleMeetLink ? (
+                  {isConsultationCallable(c.status, c.doctorId) ? (
                     <span className="mt-1 block text-[11px] text-green-700">
-                      Meet ready
+                      Call available
                     </span>
                   ) : null}
                 </td>
@@ -209,45 +211,20 @@ export default function ConsultationHistory() {
                   )}
                 </td>
                 <td className="p-2">
-                  {c.googleMeetLink ? (
-                    <div className="flex flex-wrap gap-1">
-                      <Button
-                        asChild
-                        size="sm"
-                        className="h-7 bg-green-700 px-2 text-xs hover:bg-green-600"
-                      >
-                        <a
-                          href={c.googleMeetLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <ExternalLink className="mr-1 h-3 w-3" />
-                          Join
-                        </a>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2 text-xs"
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(
-                              c.googleMeetLink!,
-                            );
-                            toast.success("Meet link copied");
-                          } catch {
-                            toast.error("Could not copy link");
-                          }
-                        }}
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
+                  {isConsultationCallable(c.status, c.doctorId) ? (
+                    <ConsultationCallActions
+                      consultationId={c.id}
+                      enabled
+                      size="sm"
+                      consultationType={c.consultationType}
+                    />
                   ) : (
                     <span className="text-xs text-gray-400">
                       {c.status === "pending"
                         ? "After confirmation"
-                        : "Not set"}
+                        : !c.doctorId
+                          ? "Awaiting doctor"
+                          : "—"}
                     </span>
                   )}
                 </td>

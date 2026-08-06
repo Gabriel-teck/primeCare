@@ -15,3 +15,4 @@ export * from "./contact";
 export * from "./payments";
 export * from "./staff";
 export * from "./records";
+export * from "./calls";

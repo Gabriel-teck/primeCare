@@ -2,13 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  Calendar,
-  MessageSquare,
-  Video,
-  ExternalLink,
-  Copy,
-} from "lucide-react";
+import { Calendar, MessageSquare, Video } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getMyAppointments } from "@/lib/api/appointment";
 import { getMyConsultations } from "@/lib/api/consultation";
@@ -19,7 +13,11 @@ import {
   AdminStatusBadge,
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import {
+  ConsultationCallActions,
+  isConsultationCallable,
+} from "@/components/calls/ConsultationCallActions";
+import { CallTestPanel } from "@/components/calls/CallTestPanel";
 
 type Appointment = {
   id: string;
@@ -34,6 +32,7 @@ type Consultation = {
   time: string;
   status: string;
   consultationType: string;
+  doctorId?: string;
   googleMeetLink?: string;
   reason?: string;
 };
@@ -109,15 +108,6 @@ export default function PatientDashboard() {
     return combined[0] || null;
   }, [upcomingConsults, upcomingAppts]);
 
-  const copyMeet = async (link: string) => {
-    try {
-      await navigator.clipboard.writeText(link);
-      toast.success("Meet link copied");
-    } catch {
-      toast.error("Could not copy link");
-    }
-  };
-
   if (!user) {
     return <p className="text-sm text-gray-500">Loading your care home…</p>;
   }
@@ -180,35 +170,19 @@ export default function PatientDashboard() {
                 <p className="mt-2 text-sm text-amber-700">
                   Awaiting confirmation
                   {nextCare.kind === "consultation"
-                    ? " — your Meet link will appear once confirmed."
+                    ? " — you can start the call once confirmed."
                     : "."}
                 </p>
               ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
               {nextCare.kind === "consultation" &&
-              nextCare.googleMeetLink &&
-              (nextCare.status === "confirmed" ||
-                nextCare.status === "rescheduled") ? (
-                <>
-                  <Button asChild className="bg-green-700 hover:bg-green-600">
-                    <a
-                      href={nextCare.googleMeetLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      Join video
-                    </a>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => copyMeet(nextCare.googleMeetLink!)}
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy link
-                  </Button>
-                </>
+              isConsultationCallable(nextCare.status, nextCare.doctorId) ? (
+                <ConsultationCallActions
+                  consultationId={nextCare.id}
+                  enabled
+                  consultationType={nextCare.consultationType}
+                />
               ) : null}
               <Button asChild variant="outline">
                 <Link
@@ -225,6 +199,8 @@ export default function PatientDashboard() {
           </div>
         )}
       </AdminSectionCard>
+
+      <CallTestPanel role="patient" className="mb-6" />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <AdminStatCard

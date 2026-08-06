@@ -8,7 +8,14 @@ export type ConsultationPayload = {
   time: string;
   reason: string;
   consultationType: string;
+  doctorId?: string;
   file?: FileList;
+};
+
+export type ConsultationDoctor = {
+  id: string;
+  fullName: string;
+  specialty?: string | null;
 };
 
 export type Consultation = {

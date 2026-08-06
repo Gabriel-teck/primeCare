@@ -21,6 +21,7 @@ import { getUnreadCount } from "@/lib/api/chat";
 import { getDoctorAppointments } from "@/lib/api/appointment";
 import { getDoctorConsultations } from "@/lib/api/consultation";
 import { mapDoctorBookings } from "@/lib/doctor/bookings";
+import { CallTestPanel } from "@/components/calls/CallTestPanel";
 import type { AdminBooking } from "@/lib/admin/types";
 
 export default function DoctorOverviewPage() {
@@ -87,6 +88,8 @@ export default function DoctorOverviewPage() {
           icon={Users}
         />
       </div>
+
+      <CallTestPanel role="doctor" className="mb-6" />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <AdminSectionCard

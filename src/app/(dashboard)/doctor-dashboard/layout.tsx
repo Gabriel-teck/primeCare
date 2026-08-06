@@ -5,6 +5,8 @@ import Providers from "../../providers";
 import { ChatProvider } from "@/context/ChatContext";
 import { SocketProvider } from "@/context/SocketContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { CallSocketProvider } from "@/context/CallSocketContext";
+import { CallProvider } from "@/context/CallProvider";
 import DoctorDashboardHeader from "@/components/dashboard-component/DoctorDashboardHeader";
 import { DoctorGuard } from "@/components/doctor";
 import { Toaster } from "@/components/ui/sonner";
@@ -34,17 +36,21 @@ export default function DoctorLayout({
         <AuthProvider>
           <SocketProvider>
             <ChatProvider>
-              <DoctorGuard>
-                <Providers>
-                  <div className="min-h-screen bg-[#f8f9fa]">
-                    <DoctorDashboardHeader />
-                    <main className="min-w-0 overflow-x-hidden px-3 pb-10 pt-20 sm:px-6 lg:ml-60 lg:px-8">
-                      {children}
-                    </main>
-                    <Toaster />
-                  </div>
-                </Providers>
-              </DoctorGuard>
+              <CallSocketProvider>
+                <CallProvider>
+                  <DoctorGuard>
+                    <Providers>
+                      <div className="min-h-screen bg-[#f8f9fa]">
+                        <DoctorDashboardHeader />
+                        <main className="min-w-0 overflow-x-hidden px-3 pb-10 pt-20 sm:px-6 lg:ml-60 lg:px-8">
+                          {children}
+                        </main>
+                        <Toaster />
+                      </div>
+                    </Providers>
+                  </DoctorGuard>
+                </CallProvider>
+              </CallSocketProvider>
             </ChatProvider>
           </SocketProvider>
         </AuthProvider>

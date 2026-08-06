@@ -9,7 +9,6 @@ import {
   AdminStatusBadge,
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -26,18 +25,21 @@ import {
   mapDoctorBookings,
   parseBookingRouteId,
 } from "@/lib/doctor/bookings";
+import {
+  ConsultationCallActions,
+  isConsultationCallable,
+} from "@/components/calls/ConsultationCallActions";
 import { Loader2 } from "lucide-react";
 
 export default function DoctorScheduleDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const rawId = String(params.id || "");
   const parsed = parseBookingRouteId(rawId);
 
   const [booking, setBooking] = useState<AdminBooking | undefined>();
   const [related, setRelated] = useState<AdminBooking[]>([]);
-  const [meetLink, setMeetLink] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -57,7 +59,6 @@ export default function DoctorScheduleDetailPage() {
           (b) => b.kind === parsed.kind && b.id === parsed.id,
         );
         setBooking(found);
-        setMeetLink(found?.googleMeetLink || "");
         setRelated(
           found
             ? all.filter(
@@ -117,23 +118,6 @@ export default function DoctorScheduleDetailPage() {
       toast.success(`Status updated to ${status}`);
     } catch {
       toast.error("Could not update status");
-    }
-  };
-
-  const saveMeet = async () => {
-    if (!token || booking.kind !== "consultation") return;
-    try {
-      await updateConsultation(
-        booking.id,
-        { googleMeetLink: meetLink.trim() || undefined },
-        token,
-      );
-      setBooking((prev) =>
-        prev ? { ...prev, googleMeetLink: meetLink.trim() || undefined } : prev,
-      );
-      toast.success("Meet link saved");
-    } catch {
-      toast.error("Could not save Meet link");
     }
   };
 
@@ -224,20 +208,28 @@ export default function DoctorScheduleDetailPage() {
         </AdminSectionCard>
 
         {booking.kind === "consultation" ? (
-          <AdminSectionCard title="Google Meet" className="lg:col-span-3">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                value={meetLink}
-                onChange={(e) => setMeetLink(e.target.value)}
-                placeholder="https://meet.google.com/..."
-              />
-              <Button
-                className="bg-green-700 hover:bg-green-600"
-                onClick={() => void saveMeet()}
-              >
-                Save link
-              </Button>
-            </div>
+          <AdminSectionCard title="Consultation call" className="lg:col-span-3">
+            {isConsultationCallable(booking.status, user?.id) ? (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-gray-600">
+                  Start a secure in-app{" "}
+                  {booking.typeLabel?.toLowerCase().includes("voice")
+                    ? "voice"
+                    : "video"}{" "}
+                  call with {booking.fullName}.
+                </p>
+                <ConsultationCallActions
+                  consultationId={booking.id}
+                  enabled
+                  remoteName={booking.fullName}
+                  consultationType={booking.typeLabel}
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">
+                Calls are available once this consultation is confirmed.
+              </p>
+            )}
           </AdminSectionCard>
         ) : null}
 

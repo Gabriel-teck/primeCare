@@ -18,6 +18,7 @@ export type {
 export type {
   ConsultationPayload,
   Consultation,
+  ConsultationDoctor,
   UpdateConsultationPayload,
 } from "./consultation";
 export type {

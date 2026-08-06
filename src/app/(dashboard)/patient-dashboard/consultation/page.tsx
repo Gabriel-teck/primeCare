@@ -13,7 +13,7 @@ export default function ConsultationPage() {
     <div>
       <AdminPageHeader
         title="Online Consultation"
-        description="Book a video visit with a clinician. Different from in-person appointments — you’ll get a Google Meet link when confirmed."
+        description="Book a video or voice visit with a clinician. Different from in-person appointments — start the call type you booked once confirmed."
       />
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="mb-6 flex w-full flex-row">

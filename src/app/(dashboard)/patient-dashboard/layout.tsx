@@ -6,6 +6,8 @@ import UserDashoardHeader from "@/components/dashboard-component/UserDashboardHe
 import { AuthProvider } from "@/context/AuthContext";
 import { SocketProvider } from "@/context/SocketContext";
 import { ChatProvider } from "@/context/ChatContext";
+import { CallSocketProvider } from "@/context/CallSocketContext";
+import { CallProvider } from "@/context/CallProvider";
 import { PatientGuard } from "@/components/patient";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -34,17 +36,21 @@ export default function PatientLayout({
         <AuthProvider>
           <SocketProvider>
             <ChatProvider>
-              <PatientGuard>
-                <Providers>
-                  <div className="min-h-screen bg-[#f8f9fa]">
-                    <UserDashoardHeader />
-                    <main className="min-w-0 overflow-x-hidden px-3 pb-10 pt-20 sm:px-6 lg:ml-60 lg:px-8">
-                      {children}
-                    </main>
-                    <Toaster />
-                  </div>
-                </Providers>
-              </PatientGuard>
+              <CallSocketProvider>
+                <CallProvider>
+                  <PatientGuard>
+                    <Providers>
+                      <div className="min-h-screen bg-[#f8f9fa]">
+                        <UserDashoardHeader />
+                        <main className="min-w-0 overflow-x-hidden px-3 pb-10 pt-20 sm:px-6 lg:ml-60 lg:px-8">
+                          {children}
+                        </main>
+                        <Toaster />
+                      </div>
+                    </Providers>
+                  </PatientGuard>
+                </CallProvider>
+              </CallSocketProvider>
             </ChatProvider>
           </SocketProvider>
         </AuthProvider>
