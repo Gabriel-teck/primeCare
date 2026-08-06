@@ -5,7 +5,7 @@ export type AuthUser = {
   email: string;
   fullName: string;
   role: ApiRole | string;
-  phone?: string;
+  phone?: string | null;
   avatarUrl?: string;
   isActive?: boolean;
   createdAt?: string;
@@ -34,6 +34,11 @@ export type ForgotPasswordPayload = {
 export type ResetPasswordPayload = {
   token: string;
   password: string;
+};
+
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
 };
 
 export type GoogleAuthPayload = {

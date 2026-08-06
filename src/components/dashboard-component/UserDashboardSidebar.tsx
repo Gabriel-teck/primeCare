@@ -82,7 +82,6 @@ export default function UserDashoardSidebar({
               Care
             </span>
           </Link>
-          <p className="mt-1 text-xs text-gray-500">Patient</p>
         </div>
         <div className="h-[calc(100%-5rem)]">
           <NavLinks />

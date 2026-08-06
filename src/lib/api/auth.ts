@@ -1,6 +1,7 @@
 import { api } from "./client";
 import type {
   AuthResponse,
+  ChangePasswordPayload,
   ForgotPasswordPayload,
   GoogleAuthPayload,
   LoginPayload,
@@ -31,6 +32,18 @@ export async function forgotPassword(email: string) {
 export async function resetPassword(token: string, password: string) {
   const payload: ResetPasswordPayload = { token, password };
   return api.post<MessageResponse>("/auth/reset-password", payload);
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+  token?: string | null,
+) {
+  const payload: ChangePasswordPayload = { currentPassword, newPassword };
+  return api.post<MessageResponse>("/auth/change-password", payload, {
+    token,
+    auth: true,
+  });
 }
 
 export async function googleAuth(idToken: string) {

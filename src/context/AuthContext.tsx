@@ -9,6 +9,7 @@ export type AuthUser = {
   email: string;
   fullName: string;
   role: string;
+  phone?: string | null;
 };
 
 type AuthContextType = {
@@ -17,6 +18,7 @@ type AuthContextType = {
   ready: boolean;
   login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
+  setUser: (user: AuthUser | null) => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -81,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ready,
         login,
         logout,
+        setUser,
       }}
     >
       {children}

@@ -4,16 +4,25 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getMyConsultations } from "@/lib/api/consultation";
+import { changePassword, getErrorMessage, updateProfile } from "@/lib/api";
 import {
   AdminPageHeader,
   AdminSectionCard,
   AdminStatusBadge,
 } from "@/components/admin";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Download } from "lucide-react";
+import { Check, Download, FileText, Loader2, Pencil } from "lucide-react";
 import { getChatAccess, getMyPayments } from "@/lib/api/payments";
+import { resolveMediaUrl } from "@/lib/api/media";
 import type { Payment } from "@/types";
 
 type CareTab = "profile" | "records" | "billing";
@@ -27,6 +36,16 @@ type ConsultRecord = {
   fileUrl?: string;
   fileName?: string;
 };
+
+function isImageFile(fileName?: string | null, fileUrl?: string | null) {
+  const name = (fileName || fileUrl || "").toLowerCase();
+  return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name);
+}
+
+function isPdfFile(fileName?: string | null, fileUrl?: string | null) {
+  const name = (fileName || fileUrl || "").toLowerCase();
+  return /\.pdf($|\?)/i.test(name);
+}
 export default function MyCarePage() {
   return (
     <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
@@ -38,20 +57,44 @@ export default function MyCarePage() {
 function MyCareContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, logout, token } = useAuth();
+  const { user, token, setUser } = useAuth();
   const initialTab = (searchParams.get("tab") as CareTab) || "profile";
   const [tab, setTab] = useState<CareTab>(
     ["profile", "records", "billing"].includes(initialTab)
       ? initialTab
       : "profile",
   );
+  const [fullName, setFullName] = useState("");
+  const [editingName, setEditingName] = useState(false);
   const [phone, setPhone] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [updatingPassword, setUpdatingPassword] = useState(false);
   const [records, setRecords] = useState<ConsultRecord[]>([]);
   const [localFiles, setLocalFiles] = useState<
     { id: string; name: string; addedAt: string }[]
   >([]);
   const [chatAccess, setChatAccess] = useState(false);
   const [billing, setBilling] = useState<Payment[]>([]);
+  const [previewFile, setPreviewFile] = useState<ConsultRecord | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    setFullName(user.fullName || "");
+    setPhone(user.phone || "");
+  }, [user]);
+
+  const previewUrl = previewFile?.fileUrl
+    ? resolveMediaUrl(previewFile.fileUrl)
+    : "";
+  const previewLabel = previewFile?.fileName || "Attachment";
+  const previewIsImage = isImageFile(
+    previewFile?.fileName,
+    previewFile?.fileUrl,
+  );
+  const previewIsPdf = isPdfFile(previewFile?.fileName, previewFile?.fileUrl);
 
   useEffect(() => {
     const next = searchParams.get("tab") as CareTab | null;
@@ -97,23 +140,55 @@ function MyCareContent() {
     router.replace(`/patient-dashboard/care?tab=${next}`);
   };
 
-  const addLocalFile = (file?: File | null) => {
-    if (!file) return;
-    const next = [
-      {
-        id: `local-${Date.now()}`,
-        name: file.name,
-        addedAt: new Date().toISOString().slice(0, 10),
-      },
-      ...localFiles,
-    ];
-    setLocalFiles(next);
-    try {
-      localStorage.setItem("primecare-local-records", JSON.stringify(next));
-    } catch {
-      // ignore
+  const handleUpdatePassword = async () => {
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      toast.error("Please fill in all password fields");
+      return;
     }
-    toast.success("File saved to My Care records (device only)");
+    if (newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("New password and confirmation do not match");
+      return;
+    }
+    setUpdatingPassword(true);
+    try {
+      await changePassword(oldPassword, newPassword, token);
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Password updated");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not update password"));
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    const nextName = fullName.trim();
+    if (!nextName) {
+      toast.error("Full name is required");
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      const updated = await updateProfile(
+        { fullName: nextName, phone: phone.trim() },
+        token,
+      );
+      setUser(updated);
+      setFullName(updated.fullName);
+      setPhone(updated.phone || "");
+      setEditingName(false);
+      toast.success("Profile saved");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not save profile"));
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   return (
@@ -152,13 +227,39 @@ function MyCareContent() {
             <dl className="mb-4 space-y-3 text-sm">
               <div>
                 <dt className="text-gray-500">Full name</dt>
-                <dd className="font-medium text-[#212529]">
-                  {user?.fullName || "—"}
+                <dd className="mt-1">
+                  {editingName ? (
+                    <Input
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Your full name"
+                      disabled={savingProfile}
+                      autoFocus
+                      className="border-gray-200 focus-visible:border-green-700 focus-visible:ring-green-700"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-[#212529]">
+                        {fullName || user?.fullName || "—"}
+                      </span>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-gray-600 hover:bg-green-50 hover:text-green-700"
+                        aria-label="Edit full name"
+                        disabled={savingProfile}
+                        onClick={() => setEditingName(true)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </dd>
               </div>
               <div>
                 <dt className="text-gray-500">Email</dt>
-                <dd className="text-[#212529]">{user?.email || "—"}</dd>
+                <dd className="mt-1 text-[#212529]">{user?.email || "—"}</dd>
               </div>
             </dl>
             <div>
@@ -169,27 +270,91 @@ function MyCareContent() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Add a phone number"
+                disabled={savingProfile}
               />
             </div>
             <Button
               className="mt-3 bg-green-700 hover:bg-green-600"
-              onClick={() => toast.success("Profile saved (local)")}
+              disabled={savingProfile}
+              onClick={() => void handleSaveProfile()}
             >
-              Save profile
+              {savingProfile ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Save profile"
+              )}
             </Button>
-          </AdminSectionCard>
-
-          <AdminSectionCard title="Account">
-            <p className="mb-3 text-sm text-gray-600">
-              Chat access on this device:{" "}
+            <p className="mt-4 text-sm text-gray-600">
+              Chat access:{" "}
               <span className="font-medium text-[#212529]">
                 {chatAccess ? "Unlocked" : "Not unlocked"}
               </span>
+              {" · "}
+              <a
+                href="/patient-dashboard/messages"
+                className="font-medium text-green-700 hover:underline"
+              >
+                Open Messages
+              </a>
             </p>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline">
-                <a href="/patient-dashboard/messages">Open Messages</a>
-              </Button>
+          </AdminSectionCard>
+
+          <AdminSectionCard title="Security Management">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-sm text-gray-600">
+                  Old Password
+                </label>
+                <PasswordInput
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  placeholder="Enter password"
+                  autoComplete="current-password"
+                  disabled={updatingPassword}
+                  className="rounded-md border border-gray-200 py-2.5 focus:border-green-700 focus:ring-1 focus:ring-green-700"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm text-gray-600">
+                  New Password
+                </label>
+                <PasswordInput
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter password"
+                  autoComplete="new-password"
+                  disabled={updatingPassword}
+                  className="rounded-md border border-gray-200 py-2.5 focus:border-green-700 focus:ring-1 focus:ring-green-700"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm text-gray-600">
+                  Confirm New Password
+                </label>
+                <PasswordInput
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Enter password"
+                  autoComplete="new-password"
+                  disabled={updatingPassword}
+                  className="rounded-md border border-gray-200 py-2.5 focus:border-green-700 focus:ring-1 focus:ring-green-700"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  type="button"
+                  onClick={handleUpdatePassword}
+                  disabled={updatingPassword}
+                  className="h-11 w-full rounded-full bg-green-700 text-white hover:bg-green-600"
+                >
+                  {updatingPassword ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="mr-2 h-4 w-4" />
+                  )}
+                  Update Password
+                </Button>
+              </div>
             </div>
           </AdminSectionCard>
         </div>
@@ -197,18 +362,6 @@ function MyCareContent() {
 
       {tab === "records" ? (
         <div className="space-y-4">
-          <AdminSectionCard
-            title="Upload a file"
-            description="Stored on this device for now. Files attached to online consultations also appear below."
-          >
-            <input
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-              className="block w-full text-sm text-gray-500 file:mr-4 file:rounded file:border-0 file:bg-green-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-green-700 hover:file:bg-green-100"
-              onChange={(e) => addLocalFile(e.target.files?.[0])}
-            />
-          </AdminSectionCard>
-
           <AdminSectionCard title="Consultation attachments">
             {consultFiles.length === 0 ? (
               <p className="text-sm text-gray-500">
@@ -231,15 +384,14 @@ function MyCareContent() {
                     </div>
                     <div className="flex items-center gap-2">
                       <AdminStatusBadge status={r.status} />
-                      <Button asChild size="sm" variant="outline">
-                        <a
-                          href={r.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Download className="mr-1 h-4 w-4" />
-                          Open
-                        </a>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPreviewFile(r)}
+                      >
+                        <Download className="mr-1 h-4 w-4" />
+                        Open
                       </Button>
                     </div>
                   </li>
@@ -248,23 +400,61 @@ function MyCareContent() {
             )}
           </AdminSectionCard>
 
-          <AdminSectionCard title="Your uploads">
-            {localFiles.length === 0 ? (
-              <p className="text-sm text-gray-500">No local uploads yet.</p>
-            ) : (
-              <ul className="divide-y divide-gray-100">
-                {localFiles.map((f) => (
-                  <li
-                    key={f.id}
-                    className="flex items-center justify-between py-3 text-sm"
-                  >
-                    <span className="font-medium text-[#212529]">{f.name}</span>
-                    <span className="text-gray-500">{f.addedAt}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </AdminSectionCard>
+          <Dialog
+            open={Boolean(previewFile)}
+            onOpenChange={(open) => {
+              if (!open) setPreviewFile(null);
+            }}
+          >
+            <DialogContent
+              className={
+                previewIsImage
+                  ? "max-w-3xl border-none bg-transparent p-2 shadow-none sm:p-4"
+                  : "max-w-3xl"
+              }
+            >
+              <DialogHeader className={previewIsImage ? "sr-only" : undefined}>
+                <DialogTitle>{previewLabel}</DialogTitle>
+              </DialogHeader>
+
+              {previewUrl && previewIsImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={previewUrl}
+                  alt={previewLabel}
+                  className="max-h-[85vh] w-full rounded-lg object-contain"
+                />
+              ) : null}
+
+              {previewUrl && previewIsPdf ? (
+                <iframe
+                  src={previewUrl}
+                  title={previewLabel}
+                  className="h-[70vh] w-full rounded-md border border-gray-200"
+                />
+              ) : null}
+
+              {previewUrl && !previewIsImage && !previewIsPdf ? (
+                <div className="flex flex-col items-center gap-4 py-6 text-center">
+                  <FileText className="h-12 w-12 text-green-700" />
+                  <p className="text-sm text-gray-600">
+                    Preview isn&apos;t available for this file type. Open it in
+                    a new tab to view or download.
+                  </p>
+                  <Button asChild className="bg-green-700 hover:bg-green-600">
+                    <a
+                      href={previewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Download className="mr-1.5 h-4 w-4" />
+                      Open file
+                    </a>
+                  </Button>
+                </div>
+              ) : null}
+            </DialogContent>
+          </Dialog>
         </div>
       ) : null}
 
