@@ -16,3 +16,4 @@ export * from "./payments";
 export * from "./staff";
 export * from "./records";
 export * from "./calls";
+export * from "./settings";

@@ -1,23 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { AdminPageHeader, AdminSectionCard } from "@/components/admin";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
+import { changePassword, getErrorMessage, getUser } from "@/lib/api";
 import { toast } from "sonner";
+import { Check, Loader2 } from "lucide-react";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function DoctorSettingsPage() {
-  const { user, logout } = useAuth();
-  const router = useRouter();
-  const [specialty, setSpecialty] = useState("General Practice");
-  const [meetLink, setMeetLink] = useState("https://meet.google.com/ada-care");
-  const [meetNotes, setMeetNotes] = useState(
-    "Join a few minutes early. Have your ID ready.",
-  );
+  const { user, token } = useAuth();
+  const [specialty, setSpecialty] = useState<string | null>(null);
   const [hoursStart, setHoursStart] = useState("09:00");
   const [hoursEnd, setHoursEnd] = useState("17:00");
   const [availableDays, setAvailableDays] = useState<string[]>([
@@ -30,6 +27,23 @@ export default function DoctorSettingsPage() {
   const [notifyBooking, setNotifyBooking] = useState(true);
   const [notifyPatient, setNotifyPatient] = useState(true);
   const [notifyAdmin, setNotifyAdmin] = useState(true);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+
+  useEffect(() => {
+    if (!token) {
+      setSpecialty(null);
+      return;
+    }
+    getUser(token)
+      .then((profile) => {
+        const value = profile.doctorProfile?.specialty?.trim();
+        setSpecialty(value || null);
+      })
+      .catch(() => setSpecialty(null));
+  }, [token]);
 
   const toggleDay = (day: string) => {
     setAvailableDays((prev) =>
@@ -37,9 +51,31 @@ export default function DoctorSettingsPage() {
     );
   };
 
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
+  const handleUpdatePassword = async () => {
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      toast.error("Please fill in all password fields");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("New password and confirmation do not match");
+      return;
+    }
+    setUpdatingPassword(true);
+    try {
+      await changePassword(oldPassword, newPassword, token);
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Password updated");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not update password"));
+    } finally {
+      setUpdatingPassword(false);
+    }
   };
 
   return (
@@ -51,7 +87,7 @@ export default function DoctorSettingsPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <AdminSectionCard title="Profile">
-          <dl className="mb-4 space-y-2 text-sm">
+          <dl className="space-y-2 text-sm">
             <div>
               <dt className="text-gray-500">Name</dt>
               <dd className="font-medium text-[#212529]">
@@ -62,53 +98,69 @@ export default function DoctorSettingsPage() {
               <dt className="text-gray-500">Email</dt>
               <dd className="text-[#212529]">{user?.email || "—"}</dd>
             </div>
-          </dl>
-          <div className="space-y-3">
             <div>
-              <label className="mb-1 block text-sm text-gray-600">
-                Specialty
-              </label>
-              <Input
-                value={specialty}
-                onChange={(e) => setSpecialty(e.target.value)}
-              />
+              <dt className="text-gray-500">Specialty</dt>
+              <dd className="text-[#212529]">{specialty || "N/A"}</dd>
             </div>
-            <Button
-              className="bg-green-700 hover:bg-green-600"
-              onClick={() => toast.message("Settings API not connected yet")}
-            >
-              Save profile
-            </Button>
-          </div>
+          </dl>
         </AdminSectionCard>
 
-        <AdminSectionCard title="Video consult defaults">
-          <div className="space-y-3">
+        <AdminSectionCard title="Security Management">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm text-gray-600">
-                Default Meet link
+              <label className="mb-1.5 block text-sm text-gray-600">
+                Old Password
               </label>
-              <Input
-                value={meetLink}
-                onChange={(e) => setMeetLink(e.target.value)}
+              <PasswordInput
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                placeholder="Enter password"
+                autoComplete="current-password"
+                disabled={updatingPassword}
+                className="rounded-md border border-gray-200 py-2.5 focus:border-green-700 focus:ring-1 focus:ring-green-700"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm text-gray-600">
-                Patient instructions
+              <label className="mb-1.5 block text-sm text-gray-600">
+                New Password
               </label>
-              <textarea
-                value={meetNotes}
-                onChange={(e) => setMeetNotes(e.target.value)}
-                className="min-h-24 w-full rounded-md border border-gray-200 p-3 text-sm outline-none focus:border-green-700 focus:ring-1 focus:ring-green-700"
+              <PasswordInput
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter password"
+                autoComplete="new-password"
+                disabled={updatingPassword}
+                className="rounded-md border border-gray-200 py-2.5 focus:border-green-700 focus:ring-1 focus:ring-green-700"
               />
             </div>
-            <Button
-              className="bg-green-700 hover:bg-green-600"
-              onClick={() => toast.message("Settings API not connected yet")}
-            >
-              Save defaults
-            </Button>
+            <div>
+              <label className="mb-1.5 block text-sm text-gray-600">
+                Confirm New Password
+              </label>
+              <PasswordInput
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Enter password"
+                autoComplete="new-password"
+                disabled={updatingPassword}
+                className="rounded-md border border-gray-200 py-2.5 focus:border-green-700 focus:ring-1 focus:ring-green-700"
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                type="button"
+                onClick={() => void handleUpdatePassword()}
+                disabled={updatingPassword}
+                className="h-11 w-full rounded-full bg-green-700 text-white hover:bg-green-600"
+              >
+                {updatingPassword ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="mr-2 h-4 w-4" />
+                )}
+                Update Password
+              </Button>
+            </div>
           </div>
         </AdminSectionCard>
 
@@ -182,15 +234,6 @@ export default function DoctorSettingsPage() {
               Save notifications
             </Button>
           </div>
-        </AdminSectionCard>
-
-        <AdminSectionCard title="Account" className="lg:col-span-2">
-          <p className="mb-3 text-sm text-gray-600">
-            Sign out of the doctor workspace on this device.
-          </p>
-          <Button variant="outline" onClick={handleLogout}>
-            Log out
-          </Button>
         </AdminSectionCard>
       </div>
     </div>

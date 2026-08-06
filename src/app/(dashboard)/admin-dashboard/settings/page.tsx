@@ -1,22 +1,104 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AdminPageHeader, AdminSectionCard } from "@/components/admin";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
+import {
+  changePassword,
+  getErrorMessage,
+  getPlatformSettings,
+  updatePlatformSettings,
+} from "@/lib/api";
 import { toast } from "sonner";
+import { Check, Loader2 } from "lucide-react";
 
 export default function AdminSettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const router = useRouter();
   const [brandName, setBrandName] = useState("PrimeCare");
   const [supportEmail, setSupportEmail] = useState("support@primecare.health");
   const [timezone, setTimezone] = useState("Africa/Lagos");
-  const [meetNotes, setMeetNotes] = useState(
-    "Share a Google Meet link when confirming video consultations.",
-  );
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+
+  useEffect(() => {
+    if (!token) {
+      setLoadingSettings(false);
+      return;
+    }
+    setLoadingSettings(true);
+    getPlatformSettings(token)
+      .then((settings) => {
+        setBrandName(settings.brandName);
+        setSupportEmail(settings.supportEmail);
+        setTimezone(settings.timezone);
+      })
+      .catch((error) => {
+        toast.error(getErrorMessage(error, "Could not load platform settings"));
+      })
+      .finally(() => setLoadingSettings(false));
+  }, [token]);
+
+  const handleSavePlatform = async () => {
+    if (!brandName.trim() || !supportEmail.trim() || !timezone.trim()) {
+      toast.error("Please fill in all platform fields");
+      return;
+    }
+    setSavingSettings(true);
+    try {
+      const updated = await updatePlatformSettings(
+        {
+          brandName: brandName.trim(),
+          supportEmail: supportEmail.trim(),
+          timezone: timezone.trim(),
+        },
+        token,
+      );
+      setBrandName(updated.brandName);
+      setSupportEmail(updated.supportEmail);
+      setTimezone(updated.timezone);
+      toast.success("Platform settings saved");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not save platform settings"));
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      toast.error("Please fill in all password fields");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("New password and confirmation do not match");
+      return;
+    }
+    setUpdatingPassword(true);
+    try {
+      await changePassword(oldPassword, newPassword, token);
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Password updated");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not update password"));
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
 
   return (
     <div>
@@ -35,6 +117,7 @@ export default function AdminSettingsPage() {
               <Input
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
+                disabled={loadingSettings || savingSettings}
               />
             </div>
             <div>
@@ -42,8 +125,10 @@ export default function AdminSettingsPage() {
                 Support email
               </label>
               <Input
+                type="email"
                 value={supportEmail}
                 onChange={(e) => setSupportEmail(e.target.value)}
+                disabled={loadingSettings || savingSettings}
               />
             </div>
             <div>
@@ -53,28 +138,83 @@ export default function AdminSettingsPage() {
               <Input
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm text-gray-600">
-                Meet link instructions
-              </label>
-              <textarea
-                value={meetNotes}
-                onChange={(e) => setMeetNotes(e.target.value)}
-                className="min-h-24 w-full rounded-md border border-gray-200 p-3 text-sm outline-none focus:border-green-700 focus:ring-1 focus:ring-green-700"
+                disabled={loadingSettings || savingSettings}
               />
             </div>
             <Button
               className="bg-green-700 hover:bg-green-600"
-              onClick={() => toast.message("Settings API not connected yet")}
+              disabled={loadingSettings || savingSettings}
+              onClick={() => void handleSavePlatform()}
             >
-              Save platform settings
+              {savingSettings ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Save platform settings"
+              )}
             </Button>
           </div>
         </AdminSectionCard>
 
-        <AdminSectionCard title="Account">
+        <AdminSectionCard title="Security Management">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm text-gray-600">
+                Old Password
+              </label>
+              <PasswordInput
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                placeholder="Enter password"
+                autoComplete="current-password"
+                disabled={updatingPassword}
+                className="rounded-md border border-gray-200 py-2.5 focus:border-green-700 focus:ring-1 focus:ring-green-700"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm text-gray-600">
+                New Password
+              </label>
+              <PasswordInput
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter password"
+                autoComplete="new-password"
+                disabled={updatingPassword}
+                className="rounded-md border border-gray-200 py-2.5 focus:border-green-700 focus:ring-1 focus:ring-green-700"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm text-gray-600">
+                Confirm New Password
+              </label>
+              <PasswordInput
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Enter password"
+                autoComplete="new-password"
+                disabled={updatingPassword}
+                className="rounded-md border border-gray-200 py-2.5 focus:border-green-700 focus:ring-1 focus:ring-green-700"
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                type="button"
+                onClick={() => void handleUpdatePassword()}
+                disabled={updatingPassword}
+                className="h-11 w-full rounded-full bg-green-700 text-white hover:bg-green-600"
+              >
+                {updatingPassword ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="mr-2 h-4 w-4" />
+                )}
+                Update Password
+              </Button>
+            </div>
+          </div>
+        </AdminSectionCard>
+
+        <AdminSectionCard title="Account" className="lg:col-span-2">
           <dl className="mb-4 space-y-2 text-sm">
             <div>
               <dt className="text-gray-500">Signed in as</dt>
@@ -93,26 +233,15 @@ export default function AdminSettingsPage() {
               </dd>
             </div>
           </dl>
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              className="border-green-700 text-green-700"
-              onClick={() =>
-                toast.message("Password change will use auth API later")
-              }
-            >
-              Change password
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                logout();
-                router.push("/login");
-              }}
-            >
-              Log out
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            onClick={() => {
+              logout();
+              router.push("/login");
+            }}
+          >
+            Log out
+          </Button>
         </AdminSectionCard>
       </div>
     </div>

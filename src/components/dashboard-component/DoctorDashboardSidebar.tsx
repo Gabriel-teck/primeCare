@@ -82,7 +82,6 @@ export default function DoctorDashboardSidebar({
               Care
             </span>
           </Link>
-          <p className="mt-1 text-xs text-gray-500">Doctor</p>
         </div>
         <div className="h-[calc(100%-5rem)]">
           <NavLinks />

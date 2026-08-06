@@ -6,6 +6,7 @@ export type {
   RegisterPayload,
   ForgotPasswordPayload,
   ResetPasswordPayload,
+  ChangePasswordPayload,
   GoogleAuthPayload,
 } from "./auth";
 export type { DoctorProfile, UserProfile, EmailExistsResponse } from "./user";

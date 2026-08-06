@@ -10,6 +10,18 @@ export async function getUser(token: string) {
   return api.get<UserProfile>("/users/me", { token, auth: true });
 }
 
+export type UpdateProfilePayload = {
+  fullName?: string;
+  phone?: string;
+};
+
+export async function updateProfile(
+  payload: UpdateProfilePayload,
+  token?: string | null,
+) {
+  return api.patch<UserProfile>("/users/me", payload, { token, auth: true });
+}
+
 export async function checkEmailExists(email: string) {
   const data = await api.get<EmailExistsResponse>("/users/exists", {
     query: { email },
