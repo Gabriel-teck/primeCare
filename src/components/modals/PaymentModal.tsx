@@ -10,6 +10,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CreditCard, Lock, CheckCircle } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { unlockChat } from "@/lib/api/payments";
+import { toast } from "sonner";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -22,6 +25,7 @@ export default function PaymentModal({
   onClose,
   onPaymentSuccess,
 }: PaymentModalProps) {
+  const { token } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentData, setPaymentData] = useState({
     cardNumber: "",
@@ -31,14 +35,20 @@ export default function PaymentModal({
   });
 
   const handlePayment = async () => {
+    if (!token) {
+      toast.error("Please sign in again");
+      return;
+    }
     setIsProcessing(true);
-
-    // Simulate payment processing
-    setTimeout(() => {
-      setIsProcessing(false);
+    try {
+      await unlockChat(token);
       onPaymentSuccess();
       onClose();
-    }, 2000);
+    } catch {
+      toast.error("Could not unlock chat access");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -51,26 +61,26 @@ export default function PaymentModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-green-700">
             <CreditCard className="h-5 w-5" />
-            Payment for Chat Service
+            Unlock care team chat
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+          <div className="rounded-lg border border-green-200 bg-green-50 p-4">
             <div className="flex items-center justify-between">
               <span className="font-medium text-green-800">
-                24/7 Doctor Chat
+                Care team messaging
               </span>
               <span className="font-bold text-green-700">$25.00</span>
             </div>
-            <p className="text-sm text-green-600 mt-1">
-              One-time payment for unlimited chat with healthcare professionals
+            <p className="mt-1 text-sm text-green-600">
+              Demo unlock — creates a paid chat entitlement on your account.
             </p>
           </div>
 
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
                 Card Number
               </label>
               <Input
@@ -86,7 +96,7 @@ export default function PaymentModal({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Expiry Date
                 </label>
                 <Input
@@ -99,7 +109,7 @@ export default function PaymentModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   CVV
                 </label>
                 <Input
@@ -112,7 +122,7 @@ export default function PaymentModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
                 Cardholder Name
               </label>
               <Input
@@ -132,13 +142,13 @@ export default function PaymentModal({
           </div>
 
           <Button
-            onClick={handlePayment}
+            onClick={() => void handlePayment()}
             disabled={isProcessing}
             className="w-full bg-green-700 hover:bg-green-600 disabled:opacity-50"
           >
             {isProcessing ? (
               <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
                 Processing Payment...
               </div>
             ) : (

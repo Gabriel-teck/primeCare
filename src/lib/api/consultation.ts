@@ -1,57 +1,70 @@
-const API_BASE_URL = "http://localhost:3001";
+import { api } from "./client";
+import type {
+  Consultation,
+  ConsultationDoctor,
+  ConsultationPayload,
+  ReschedulePayload,
+  UpdateConsultationPayload,
+} from "@/types";
 
-export type ConsultationPayload = {
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  date: string;
-  time: string;
-  reason: string;
-  consultationType: string;
-  file?: FileList;
-};
+export type { ConsultationPayload } from "@/types";
+
+export async function listConsultationDoctors(token: string | null) {
+  return api.get<ConsultationDoctor[]>("/consultations/doctors", {
+    token,
+    auth: true,
+  });
+}
 
 export async function bookConsultation(
   data: ConsultationPayload,
   token: string | null,
   file?: File,
 ) {
-  if (!token) throw new Error("Not authenticated");
   const formData = new FormData();
   Object.entries(data).forEach(([key, value]) => {
-    if (key !== "file") formData.append(key, value as string);
+    if (key === "file" || value === undefined) return;
+    formData.append(key, String(value));
   });
   if (file) formData.append("file", file);
 
-  const res = await fetch("http://localhost:3001/consultations", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
+  return api.postForm<Consultation>("/consultations", formData, {
+    token,
+    auth: true,
   });
-  if (!res.ok) throw new Error("Booking failed");
-  return res.json();
 }
 
-export async function getMyConsultations(token: string | null) {
-  if (!token) throw new Error("Not authenticated");
-  const res = await fetch(`${API_BASE_URL}/consultations/my`, {
-    headers: { Authorization: `Bearer ${token}` },
+export async function getMyConsultations(
+  token: string | null,
+  status?: string,
+) {
+  return api.get<Consultation[]>("/consultations/my", {
+    token,
+    auth: true,
+    query: {
+      status: status && status !== "all" ? status : undefined,
+    },
   });
-  if (!res.ok) throw new Error("Failed to fetch");
-  return res.json();
+}
+
+export async function getDoctorConsultations(
+  token: string | null,
+  status?: string,
+) {
+  return api.get<Consultation[]>("/consultations/doctor/my", {
+    token,
+    auth: true,
+    query: {
+      status: status && status !== "all" ? status : undefined,
+    },
+  });
 }
 
 export async function cancelConsultation(id: string, token: string | null) {
-  if (!token) throw new Error("Not authenticated");
-  const res = await fetch(`http://localhost:3001/consultations/cancel/${id}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+  return api.patch<Consultation>(`/consultations/cancel/${id}`, undefined, {
+    token,
+    auth: true,
   });
-  if (!res.ok) throw new Error("Cancel failed");
-  return res.json();
 }
 
 export async function rescheduleConsultation(
@@ -60,46 +73,33 @@ export async function rescheduleConsultation(
   time: string,
   token: string | null,
 ) {
-  if (!token) throw new Error("Not authenticated");
-  const res = await fetch(
-    `http://localhost:3001/consultations/reschedule/${id}`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ date, time }),
-    },
-  );
-  if (!res.ok) throw new Error("Reschedule failed");
-  return res.json();
+  const payload: ReschedulePayload = { date, time };
+  return api.patch<Consultation>(`/consultations/reschedule/${id}`, payload, {
+    token,
+    auth: true,
+  });
 }
 
-//Admin
-export async function getAllConsultations(token: string | null) {
-  if (!token) throw new Error("Not authenticated");
-  const res = await fetch(`${API_BASE_URL}/consultations`, {
-    headers: { Authorization: `Bearer ${token}` },
+export async function getAllConsultations(
+  token: string | null,
+  status?: string,
+) {
+  return api.get<Consultation[]>("/consultations", {
+    token,
+    auth: true,
+    query: {
+      status: status && status !== "all" ? status : undefined,
+    },
   });
-  if (!res.ok) throw new Error("Failed to fetch consultations");
-  return res.json();
 }
 
 export async function updateConsultation(
   id: string,
-  data: Record<string, unknown>,
+  data: UpdateConsultationPayload | Record<string, unknown>,
   token: string | null,
 ) {
-  if (!token) throw new Error("Not authenticated");
-  const res = await fetch(`${API_BASE_URL}/consultations/${id}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
+  return api.patch<Consultation>(`/consultations/${id}`, data, {
+    token,
+    auth: true,
   });
-  if (!res.ok) throw new Error("Update failed");
-  return res.json();
 }

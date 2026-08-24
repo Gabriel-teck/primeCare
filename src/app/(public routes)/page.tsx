@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import Carousel from "@/components/custom/Carousel";
 import Howitworks from "@/components/landing-component/Howitworks";
+import UrgentCareConditions from "@/components/landing-component/UrgentCareConditions";
+import ContactUs from "@/components/landing-component/ContactUs";
+import BookAppointmentButton from "@/components/landing-component/BookAppointmentButton";
 import TestimonialsCarousel from "@/components/ui/TestimonialCarousel";
 
 export default function Home() {
@@ -44,7 +47,7 @@ export default function Home() {
               </div>
 
               {/* Desktop-only search bar */}
-              <div className="relative hidden md:block pt-4">
+              {/* <div className="relative hidden md:block pt-4">
                 <form className="space-y-2">
                   <div className="relative">
                     <Input
@@ -62,12 +65,12 @@ export default function Home() {
                     Search <ChevronRight className="w-4 h-4" />
                   </Button>
                 </form>
-              </div>
+              </div> */}
             </div>
 
             {/* Hero Image */}
             <div className="order-2 md:order-2 w-full md:w-1/2 max-w-[600px]">
-              <Link href="">
+              <Link href="#care-service">
                 <Image
                   src={first_medic}
                   alt="Medic-1"
@@ -103,7 +106,10 @@ export default function Home() {
         </section>
 
         {/* Consultation section */}
-        <section className="mt-[18px]">
+        <section
+          id="consultation"
+          className="mt-[18px] scroll-mt-24 md:scroll-mt-28"
+        >
           <div className="container mx-auto flex flex-col gap-6 md:flex-row px-4 sm:px-6 lg:px-8 md:items-start justify-center">
             <div className="order-2 md:order-1">
               <Image src={consult} alt="consult svg" />
@@ -113,23 +119,18 @@ export default function Home() {
                 Online appointments
               </h2>
               <p className="leading-5 mt-[30px] text-sm font-light tracking-tight">
-                Consultation with Doctors and other healthcare professionals
+                Online Consultation with Doctors and other healthcare
+                professionals
                 <br></br>
                 <span className="font-bold">Whenever! Wherever! Anywhere!</span>
               </p>
-              <Button
-                variant="outline"
-                size="xl"
-                className="mt-[26px] rounded-full px-12 text-md md:text-lg bg-green-700 text-white hover:text-white hover:text-lg hover:bg-green-700 flex items-center gap-4"
-              >
-                Book <ChevronRight className="w-4 h-4" />
-              </Button>
+              <BookAppointmentButton />
             </div>
           </div>
         </section>
 
         {/* Urgent care */}
-        <section className="w-full mt-[60px] px-[20px]">
+        <section className="w-full mt-[60px] px-[20px] scroll-mt-24 md:scroll-mt-28">
           <div className="container mx-auto flex flex-col md:flex-row md:justify-between p-[30px] md:p-[35px] sm:px-6 lg:px-8 bg-[linear-gradient(135deg,_#1d884a,_#9fd6b6)] rounded-[20px]">
             <div className="max-w-xl flex flex-col items-center md:items-start text-white">
               <h3 className="tracking-normal text-[36px] font-bold mb-[30px]">
@@ -154,7 +155,7 @@ export default function Home() {
         </section>
 
         {/* Need An Urgent Care Section */}
-        <section className="w-[100%] mt-[10rem]">
+        <section id="care-service" className="w-[100%] mt-[10rem]">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col mx-auto md:w-[80%] items-center">
               <h1 className="text-[rgb(51, 51, 51)] text-[32px] font-semibold tracking-normal">
@@ -169,58 +170,46 @@ export default function Home() {
             </div>
 
             {/* List of bookings */}
-            <div className="grid md:grid-cols-3 gap-2 md:gap-x-4 mt-8">
-              {Array.from({ length: 12 }).map((_, index) => (
-                <Button
-                  key={index}
-                  variant="ghost"
-                  size="xl"
-                  className="bg-[#ffff] text-[16px] font-bold leading-5 text-left text-[rgb(29,136,74)] flex justify-between border-1 border-[rgb(29,136,74)] rounded-[50px] pt-[16px] pr-[20px] pb-[15px] pl-[25px]"
-                >
-                  Malaria
-                  <span className="rounded-full bg-green-100 p-0.5">
-                    <ChevronRight />
-                  </span>
-                </Button>
-              ))}
-            </div>
+            <UrgentCareConditions />
           </div>
         </section>
 
         {/* Medical Specialists */}
-        <section className="w-[100%] mt-[10rem]">
+        <section className="mt-[10rem] w-full overflow-hidden">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col mx-auto md:w-[80%] items-center">
+            <div className="mx-auto flex flex-col items-center md:w-[80%]">
               <h1 className="text-[rgb(51, 51, 51)] text-[32px] font-semibold tracking-normal">
                 Medical specialties
               </h1>
               <p className="px-5 text-[14px] font-normal tracking-tight leading-6 text-[#828282]">
-                Baba Telehealth provides access to a wide range of specialists
-                and doctors who have the right experience and expertise for your
-                specific conditions. Best of all, you do not have to worry about
-                travelling. Book an Online appointment for the days and times
-                that work best for you.
+                PrimeCare Telehealth provides access to a wide range of
+                specialists and doctors who have the right experience and
+                expertise for your specific conditions. Best of all, you do not
+                have to worry about travelling. Book an Online appointment for
+                the days and times that work best for you.
               </p>
             </div>
+          </div>
 
-            {/* List of bookings */}
-            <div>
-              <Carousel />
-            </div>
+          <div className="mt-8 w-full">
+            <Carousel />
           </div>
         </section>
 
         {/* How it works */}
-        <section className="mt-[2rem] bg-[#F6FAFD]">
+        <section
+          id="how-it-works"
+          className="mt-[2rem] bg-[#F6FAFD] scroll-mt-24 md:scroll-mt-28"
+        >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col mx-auto md:w-[80%] items-center">
               <h1 className="pt-[90px] text-[rgb(51, 51, 51)] text-[32px] font-semibold tracking-normal">
                 How It Works
               </h1>
               <p className="px-5 text-[14px] font-normal tracking-tight leading-6 text-[#828282]">
-                Baba Telehealth provides access to a wide range of specialists
-                and doctors with the right experience and expertise for your own
-                unique concerns.
+                PrimeCare Telehealth provides access to a wide range of
+                specialists and doctors with the right experience and expertise
+                for your own unique concerns.
               </p>
             </div>
 
@@ -258,6 +247,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        <ContactUs />
       </main>
     </>
   );

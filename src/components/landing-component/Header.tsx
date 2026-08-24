@@ -27,13 +27,14 @@ export default function Header() {
   };
 
   const handleDashboard = () => {
-    if (user?.role === "admin") {
+    if (user?.role === "admin" || user?.role === "super_admin") {
       router.push("/admin-dashboard");
-      setShowNavBar(false);
+    } else if (user?.role === "doctor") {
+      router.push("/doctor-dashboard");
     } else {
       router.push("/patient-dashboard");
-      setShowNavBar(false);
     }
+    setShowNavBar(false);
   };
 
   const handleProfile = () => {
@@ -63,28 +64,34 @@ export default function Header() {
             Home
           </Link>
           <Link
-            href="#2"
+            href="/#consultation"
             className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
-            Consultation
+            Online Consultation
           </Link>
           <Link
-            href="#3"
+            href="/#care-service"
             className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
             Care Service
           </Link>
           <Link
-            href="#4"
+            href="/#how-it-works"
             className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
           >
             How It Works
           </Link>
           <Link
-            href="#5"
+            href="/#about"
             className="text-black transition-colors hover:bg-gray-100 rounded-md px-6 py-2"
           >
             About us
+          </Link>
+          <Link
+            href="/#contact"
+            className="text-black hover:text-green-600 transition-colors hover:bg-gray-100 rounded-md px-4 py-2"
+          >
+            Contact Us
           </Link>
 
           {/* Conditional rendering based on authentication */}
@@ -92,11 +99,14 @@ export default function Header() {
             // Authenticated user - show dropdown
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="flex items-center rounded-3xl"
+                >
                   <User className="h-4 w-4" />
-                  <span className="hidden md:inline">
+                  {/* <span className="hidden md:inline">
                     {user.fullName || user.email}
-                  </span>
+                  </span> */}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -178,32 +188,39 @@ export default function Header() {
                 Home
               </Link>
               <Link
-                href="#2"
+                href="/#consultation"
+                className="text-lg py-2 hover:text-green-600 transition-colors"
+                onClick={() => setShowNavBar(false)}
+              >
+                Online Consultation
+              </Link>
+              <Link
+                href="/#care-service"
                 className="text-lg py-2 hover:text-green-600 transition-colors"
                 onClick={() => setShowNavBar(false)}
               >
                 Care Service
               </Link>
               <Link
-                href="#3"
+                href="/#how-it-works"
                 className="text-lg py-2 hover:text-green-600 transition-colors"
                 onClick={() => setShowNavBar(false)}
               >
-                Consultation
+                How It Works
               </Link>
               <Link
-                href="#4"
+                href="/#about"
                 className="text-lg py-2 hover:text-green-600 transition-colors"
                 onClick={() => setShowNavBar(false)}
               >
                 About us
               </Link>
               <Link
-                href="#5"
+                href="/#contact"
                 className="text-lg py-2 hover:text-green-600 transition-colors"
                 onClick={() => setShowNavBar(false)}
               >
-                Contact us
+                Contact Us
               </Link>
 
               {/* Mobile authentication buttons */}

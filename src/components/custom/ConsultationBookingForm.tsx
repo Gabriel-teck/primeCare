@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Video } from "lucide-react";
@@ -8,7 +8,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/context/AuthContext";
-import { bookConsultation } from "@/lib/api/consultation";
+import {
+  bookConsultation,
+  listConsultationDoctors,
+} from "@/lib/api/consultation";
+import type { ConsultationDoctor } from "@/types";
 
 const schema = z.object({
   fullName: z.string().min(1, "Full name is required"),
@@ -17,7 +21,10 @@ const schema = z.object({
   date: z.string().min(1, "Date is required"),
   time: z.string().min(1, "Time is required"),
   reason: z.string().min(1, "Reason is required"),
-  consultationType: z.string().min(1, "Consultation type is required"),
+  consultationType: z.enum(["Online Video Call", "Online Voice Call"], {
+    required_error: "Consultation type is required",
+  }),
+  doctorId: z.string().optional(),
   file: z.any().optional(),
 });
 
@@ -32,6 +39,7 @@ export default function ConsultationBookingForm({
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
+  const [doctors, setDoctors] = useState<ConsultationDoctor[]>([]);
 
   const {
     register,
@@ -47,14 +55,27 @@ export default function ConsultationBookingForm({
       date: "",
       time: "",
       reason: "",
+      doctorId: "",
+      consultationType: "Online Video Call",
     },
   });
+
+  useEffect(() => {
+    if (!token) return;
+    listConsultationDoctors(token)
+      .then(setDoctors)
+      .catch(() => setDoctors([]));
+  }, [token]);
 
   const onSubmit = async (data: FormData) => {
     setError("");
     setSuccess(false);
     try {
-      await bookConsultation(data, token, data.file?.[0]);
+      await bookConsultation(
+        { ...data, doctorId: data.doctorId || undefined },
+        token,
+        data.file?.[0],
+      );
       setSuccess(true);
       reset({
         fullName: user?.fullName || "",
@@ -63,6 +84,8 @@ export default function ConsultationBookingForm({
         date: "",
         time: "",
         reason: "",
+        doctorId: "",
+        consultationType: "Online Video Call",
         file: undefined,
       });
       setFileName("");
@@ -81,9 +104,10 @@ export default function ConsultationBookingForm({
         className="flex-1 bg-white rounded-lg shadow p-6"
         autoComplete="off"
       >
-        <h2 className="text-xl font-bold mb-2">Book a Consultation</h2>
-        <p className="text-gray-500 mb-6 text-sm">
-          Please fill out the form below to request an online video consultation
+        <h2 className="mb-2 text-xl font-bold">Book an Online Consultation</h2>
+        <p className="mb-6 text-sm text-gray-500">
+          Request an online video or voice visit. For clinic or follow-up
+          visits, use Appointments instead.
         </p>
         {error && (
           <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -133,28 +157,53 @@ export default function ConsultationBookingForm({
           </div>
         </div>
         <div className="mb-4">
-          <label className="block font-medium mb-1">Consultation Type</label>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center">
+          <label className="block font-medium mb-1">Consultation Type *</label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-6">
+            <label className="flex items-center gap-2 text-sm">
               <input
                 {...register("consultationType")}
                 type="radio"
                 value="Online Video Call"
-                checked
-                readOnly
                 className="accent-green-600"
               />
-              <span className="ml-2 font-medium">Online Video Call</span>
-            </div>
-            <span className="text-xs text-gray-500">
-              A Google Meet link will be sent upon confirmation
-            </span>
+              <span className="font-medium">Online Video Call</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                {...register("consultationType")}
+                type="radio"
+                value="Online Voice Call"
+                className="accent-green-600"
+              />
+              <span className="font-medium">Online Voice Call</span>
+            </label>
           </div>
+          <p className="mt-1 text-xs text-gray-500">
+            The type you choose is the call you&apos;ll start once confirmed.
+          </p>
           {errors.consultationType && (
             <p className="text-red-500 text-xs mt-1">
               {errors.consultationType.message}
             </p>
           )}
+        </div>
+        <div className="mb-4">
+          <label className="block font-medium mb-1">Preferred Doctor</label>
+          <select
+            {...register("doctorId")}
+            className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
+          >
+            <option value="">No preference — assign for me</option>
+            {doctors.map((doctor) => (
+              <option key={doctor.id} value={doctor.id}>
+                {doctor.fullName}
+                {doctor.specialty ? ` · ${doctor.specialty}` : ""}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-gray-500">
+            Picking a doctor lets you start the call as soon as it is confirmed.
+          </p>
         </div>
         <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -174,14 +223,14 @@ export default function ConsultationBookingForm({
         </div>
         <div className="mb-4">
           <label className="block font-medium mb-1">
-            Reason for Consultation *
+            Reason for Online Consultation *
           </label>
           <textarea
             {...register("reason")}
             required
             rows={3}
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
-            placeholder="Describe your symptoms, concerns, or reason for this consultation..."
+            className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
+            placeholder="Describe your symptoms, concerns, or reason for this online consultation..."
           />
           {errors.reason && (
             <p className="text-red-500 text-xs mt-1">{errors.reason.message}</p>
@@ -212,24 +261,27 @@ export default function ConsultationBookingForm({
           className="w-full bg-green-600 hover:bg-green-700"
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Submitting..." : "Submit Consultation Request"}
+          {isSubmitting ? "Submitting..." : "Submit Online Consultation"}
         </Button>
         {success && (
-          <div className="mt-4 text-green-700 text-center font-medium">
-            Consultation request submitted!
+          <div className="mt-4 text-center font-medium text-green-700">
+            Online consultation request submitted!
           </div>
         )}
       </form>
 
       {/* Side Info Panels */}
-      <div className="flex flex-col gap-6 w-full lg:w-80">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center gap-2 mb-2 text-green-700 font-semibold">
+      <div className="flex w-full flex-col gap-6 lg:w-80">
+        <div className="rounded-lg bg-white p-4 shadow">
+          <div className="mb-2 flex items-center gap-2 font-semibold text-green-700">
             <Video className="h-5 w-5" />
-            Online Video Consultations
+            Online Consultations
           </div>
           <div className="text-sm">
-            <div>Google Meet link will be sent after confirmation.</div>
+            <div>
+              Join a secure in-app video or voice call after confirmation —
+              matching the type you book.
+            </div>
             <div className="mt-2">
               Monday - Friday:{" "}
               <span className="font-medium">9:00 AM - 5:00 PM</span>
@@ -238,24 +290,24 @@ export default function ConsultationBookingForm({
               Saturday: <span className="font-medium">9:00 AM - 2:00 PM</span>
             </div>
             <div>
-              Sunday: <span className="font-medium">Closed</span>
+              Sunday: <span className="font-medium">9:00 AM - 2:00 PM</span>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="font-semibold mb-2">What to Expect</div>
-          <ol className="list-decimal list-inside text-sm text-gray-700 space-y-1">
+        <div className="rounded-lg bg-white p-4 shadow">
+          <div className="mb-2 font-semibold">What to Expect</div>
+          <ol className="list-inside list-decimal space-y-1 text-sm text-gray-700">
             <li>
               <span className="font-medium text-green-700">Submission:</span>{" "}
-              Your consultation request is submitted
+              Your online consultation request is submitted
             </li>
             <li>
               <span className="font-medium text-green-700">Confirmation:</span>{" "}
-              You&apos;ll receive a Google Meet link upon acceptance
+              You&apos;ll be able to start your booked call type once accepted
             </li>
             <li>
-              <span className="font-medium text-green-700">Consultation:</span>{" "}
-              Join the video call at your scheduled time
+              <span className="font-medium text-green-700">Visit:</span> Join
+              the call at your scheduled time
             </li>
           </ol>
         </div>

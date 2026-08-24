@@ -5,7 +5,10 @@ import insta from "../../../public/assets/insta.webp";
 
 export const Footer = () => {
   return (
-    <footer className="bg-[#1d884a] text-white">
+    <footer
+      id="about"
+      className="bg-[#1d884a] text-white scroll-mt-24 md:scroll-mt-28"
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 ">
         <div className="flex flex-col items-center justify-center">
           <div className="flex text-shadow-lg py-8">
@@ -15,8 +18,8 @@ export const Footer = () => {
             </Link>
           </div>
           <p className="leading-4 text-[13px] pb-8">
-            Baba Telehealth is a trademark of Baba Healthcare Digital Services
-            inc.
+            PrimeCare Telehealth is a trademark of Baba Healthcare Digital
+            Services inc.
           </p>
           <div className="flex gap-4 leading-4 text-[13px] pb-6">
             <span>Terms of Use</span>

@@ -6,6 +6,8 @@ import { ChatProvider } from "@/context/ChatContext";
 import { SocketProvider } from "@/context/SocketContext";
 import { AuthProvider } from "@/context/AuthContext";
 import AdminDashboardHeader from "@/components/dashboard-component/AdminDashboardHeader";
+import { AdminGuard } from "@/components/admin";
+import { Toaster } from "@/components/ui/sonner";
 
 const gabarito = Gabarito({
   subsets: ["latin"],
@@ -13,8 +15,12 @@ const gabarito = Gabarito({
 });
 
 export const metadata: Metadata = {
-  title: "PrimeCare",
-  description: "An Online Medic-care",
+  title: "PrimeCare Admin",
+  description: "PrimeCare platform super-admin console",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default function AdminLayout({
@@ -28,13 +34,17 @@ export default function AdminLayout({
         <AuthProvider>
           <SocketProvider>
             <ChatProvider>
-              <div className="flex-1 flex flex-col">
-                {/* Sidebar is now handled within the header component */}
-                <AdminDashboardHeader />
-                <main className="flex-1 pt-16 lg:ml-60">
-                  <Providers>{children}</Providers>
-                </main>
-              </div>
+              <AdminGuard>
+                <Providers>
+                  <div className="min-h-screen bg-[#f8f9fa]">
+                    <AdminDashboardHeader />
+                    <main className="min-w-0 overflow-x-hidden px-3 pb-10 pt-20 sm:px-6 lg:ml-60 lg:px-8">
+                      {children}
+                    </main>
+                    <Toaster />
+                  </div>
+                </Providers>
+              </AdminGuard>
             </ChatProvider>
           </SocketProvider>
         </AuthProvider>

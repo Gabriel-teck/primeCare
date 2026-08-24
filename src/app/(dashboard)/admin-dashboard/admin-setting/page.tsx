@@ -1,10 +1,5 @@
-export default function AdminSettingPage() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold">Settings</h1>
-      <p className="mt-2 text-muted-foreground">
-        Admin settings will appear here.
-      </p>
-    </div>
-  );
+import { redirect } from "next/navigation";
+
+export default function LegacySettingRedirect() {
+  redirect("/admin-dashboard/settings");
 }

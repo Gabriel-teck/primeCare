@@ -9,58 +9,83 @@ export type AuthUser = {
   email: string;
   fullName: string;
   role: string;
+  phone?: string | null;
 };
 
 type AuthContextType = {
   user: AuthUser | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  ready: boolean;
+  login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
+  setUser: (user: AuthUser | null) => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+export function isAdminRole(role?: string) {
+  return role === "admin" || role === "super_admin";
+}
+
+function dashboardForRole(role: string) {
+  if (isAdminRole(role)) return "/admin-dashboard";
+  if (role === "doctor") return "/doctor-dashboard";
+  return "/patient-dashboard";
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("token");
-    if (stored) {
-      setToken(stored);
-      userApi
-        .getUser(stored)
-        .then(setUser)
-        .catch(() => setUser(null));
+
+    if (!stored) {
+      setReady(true);
+      return;
     }
+
+    userApi
+      .getUser(stored)
+      .then((nextUser) => {
+        setToken(stored);
+        setUser(nextUser);
+      })
+      .catch(() => {
+        localStorage.removeItem("token");
+        setToken(null);
+        setUser(null);
+      })
+      .finally(() => setReady(true));
   }, []);
 
   const login = async (email: string, password: string) => {
-    try {
-      const data = await authApi.login(email, password);
-      console.log("AuthContext: Login response:", data);
-
-      setToken(data.access_token);
-      localStorage.setItem("token", data.access_token);
-
-      // Fetch user data using the token
-      const user = await userApi.getUser(data.access_token);
-      console.log("AuthContext: User data from /users/me:", user);
-      setUser(user);
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
-    }
+    const data = await authApi.login(email, password);
+    setToken(data.access_token);
+    localStorage.setItem("token", data.access_token);
+    const nextUser = await userApi.getUser(data.access_token);
+    setUser(nextUser);
+    return nextUser;
   };
 
   const logout = () => {
+    localStorage.removeItem("token");
     setToken(null);
     setUser(null);
-    localStorage.removeItem("token");
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        ready,
+        login,
+        logout,
+        setUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -73,3 +98,5 @@ export function useAuth() {
   }
   return context;
 }
+
+export { dashboardForRole };

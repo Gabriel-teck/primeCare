@@ -10,22 +10,32 @@ type Testimonial = {
 
 const TestimonialCard = ({ testimonial }: { testimonial: Testimonial }) => {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 w-full max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-2">
-        <Image
-          src={testimonial.image}
-          alt={testimonial.name}
-          width={40}
-          height={40}
-          className="rounded-full object-contain"
-        />
-        <div className="flex flex-col gap-1 mb-4">
-          <h3 className="font-semibold text-gray-900">{testimonial.name}</h3>
-          <Image src={ranks} alt="star" width={100} height={100} />
+    <div className="mx-auto w-full max-w-2xl rounded-lg bg-white p-6 shadow-sm">
+      <div className="mb-4 flex items-center gap-3">
+        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-gray-100">
+          <Image
+            src={testimonial.image}
+            alt={testimonial.name}
+            fill
+            sizes="48px"
+            className="object-cover"
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1">
+          <h3 className="truncate font-semibold text-gray-900">
+            {testimonial.name}
+          </h3>
+          <Image
+            src={ranks}
+            alt="star rating"
+            width={100}
+            height={20}
+            className="h-5 w-auto object-contain object-left"
+          />
         </div>
       </div>
 
-      <p className="text-[14px] text-gray-600 text-lg leading-6">
+      <p className="min-h-[96px] text-[14px] leading-6 text-gray-600">
         {testimonial.message}
       </p>
     </div>

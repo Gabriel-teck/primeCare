@@ -4,343 +4,224 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import {
-  Send,
-  Phone,
-  Paperclip,
-  Image as ImageIcon,
-  File,
-  X,
-  Video,
-  Mic,
-} from "lucide-react";
-import { Message } from "@/types/chat";
+import { Send, File, Loader2 } from "lucide-react";
+import type { ChatMessage, Conversation, Message } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
+import {
+  createConversation,
+  listConversations,
+  markConversationRead,
+} from "@/lib/api/chat";
+import { useMessageCache } from "@/hooks/useMessageCache";
+import { usePeerPresence, useTypingIndicator } from "@/hooks/useChatPresence";
+import { useUnreadBadge } from "@/hooks/useUnreadBadge";
+import { ChatPeerStatus } from "@/components/chat/ChatPeerStatus";
 
-type ConversationMessage = {
-  content?: string;
-};
-
-type Conversation = {
-  id: string;
-  messages?: ConversationMessage[];
-};
-
-type IncomingChatMessage = {
-  id: string;
-  content: string;
-  sender: string;
-  createdAt: string;
-};
-
-type ApiChatMessage = {
-  id: string;
-  content: string;
-  sender: string;
-  createdAt: string;
-};
+function toUiMessage(msg: ChatMessage, myUserId?: string): Message {
+  const mine =
+    msg.senderId === myUserId ||
+    msg.sender === "patient" ||
+    msg.sender === "user";
+  return {
+    id: msg.id,
+    text: msg.content,
+    sender: mine ? "user" : "doctor",
+    timestamp: new Date(msg.createdAt),
+    type: "text",
+  };
+}
 
 export default function ChatInterface() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { socket } = useSocket();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { refresh: refreshUnread } = useUnreadBadge();
+  const cache = useMessageCache(token);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversation, setCurrentConversation] =
     useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [, setIsTyping] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [bootLoading, setBootLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Socket event listeners
-  useEffect(() => {
-    if (!socket) return;
-
-    socket.on("receiveMessage", (message: IncomingChatMessage) => {
-      console.log("Received message:", message);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: message.id,
-          text: message.content,
-          sender: message.sender === "admin" ? "doctor" : "user",
-          timestamp: new Date(message.createdAt),
-          type: "text",
-        },
-      ]);
-    });
-
-    socket.on("userTyping", (data: { isTyping: boolean }) => {
-      setIsTyping(data.isTyping);
-    });
-
-    return () => {
-      socket.off("receiveMessage");
-      socket.off("userTyping");
-    };
-  }, [socket]);
+  const peerId = currentConversation?.peer?.id;
+  const online = usePeerPresence(peerId);
+  const { peerTyping, emitTyping } = useTypingIndicator(
+    currentConversation?.id,
+  );
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, peerTyping]);
 
-  const loadMessages = useCallback(
-    async (conversationId: string) => {
-      if (!token) return;
-
-      try {
-        setIsLoading(true);
-        console.log("Loading messages for conversation:", conversationId);
-
-        const response = await fetch(
-          `http://localhost:3001/chat/conversations/${conversationId}/messages`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-
-        console.log("Messages response status:", response.status);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Messages response error:", errorText);
-          throw new Error(
-            `Failed to load messages: ${response.status} - ${errorText}`,
-          );
-        }
-
-        const data: ApiChatMessage[] = await response.json();
-        console.log("Loaded messages:", data);
-        const formattedMessages: Message[] = data.map((msg) => ({
-          id: msg.id,
-          text: msg.content,
-          sender: msg.sender === "admin" ? "doctor" : "user",
-          timestamp: new Date(msg.createdAt),
-          type: "text",
-        }));
-        setMessages(formattedMessages);
-
-        if (socket) {
-          socket.emit("joinConversation", { conversationId });
-          console.log("Joined conversation room:", conversationId);
-        }
-      } catch (error) {
-        console.error("Failed to load messages:", error);
-        setError(
-          error instanceof Error ? error.message : "Failed to load messages",
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [token, socket],
-  );
-
-  const handleConversationSelect = useCallback(
-    (conversation: Conversation) => {
-      console.log("Selected conversation:", conversation);
+  const openConversation = useCallback(
+    async (conversation: Conversation) => {
       setCurrentConversation(conversation);
-      void loadMessages(conversation.id);
+      const cached = cache.getCached(conversation.id);
+      if (cached) {
+        setMessages(cached.map((m) => toUiMessage(m, user?.id)));
+      }
+      socket?.emit(
+        "joinConversation",
+        { conversationId: conversation.id },
+        (ack?: { peers?: { userId: string; online: boolean }[] }) => {
+          // presence handled by usePeerPresence + ack optional
+          void ack;
+        },
+      );
+      void markConversationRead(conversation.id, token).then(() =>
+        refreshUnread(),
+      );
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === conversation.id ? { ...c, unreadCount: 0 } : c,
+        ),
+      );
     },
-    [loadMessages],
+    [cache, user?.id, socket, token, refreshUnread],
   );
 
   const createNewConversation = useCallback(async () => {
     if (!token) return;
-
     try {
-      console.log("Creating new conversation...");
-      const response = await fetch("http://localhost:3001/chat/conversations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          adminId: "4e0a4401-c205-4bdb-8edf-3d6c24bf6951", // PrimeCare Admin ID
-        }),
-      });
-
-      console.log("Create conversation response status:", response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Create conversation error:", errorText);
-        throw new Error(
-          `Failed to create conversation: ${response.status} - ${errorText}`,
-        );
-      }
-
-      const conversation: Conversation = await response.json();
-      console.log("Created conversation:", conversation);
-
-      setCurrentConversation(conversation);
+      const created = await createConversation({ type: "PATIENT_CARE" }, token);
+      const conversation: Conversation = {
+        id: created.id,
+        type: created.type,
+        messages: [],
+        unreadCount: 0,
+      };
+      cache.setCached(conversation.id, []);
       setConversations([conversation]);
-
-      if (socket) {
-        socket.emit("joinConversation", { conversationId: conversation.id });
-        console.log("Joined conversation room:", conversation.id);
-      }
-    } catch (error) {
-      console.error("Failed to create conversation:", error);
+      await openConversation(conversation);
+    } catch (err) {
       setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to create conversation",
+        err instanceof Error ? err.message : "Failed to create conversation",
       );
     }
-  }, [token, socket]);
+  }, [token, cache, openConversation]);
 
   const loadConversations = useCallback(async () => {
     if (!token) return;
-
     try {
-      setIsLoading(true);
+      setBootLoading(true);
       setError(null);
-      console.log(
-        "Loading conversations with token:",
-        token.substring(0, 20) + "...",
+      const data = await listConversations(token);
+      const care = (data || []).filter(
+        (c) => c.type === "PATIENT_CARE" || !c.type,
       );
-
-      const response = await fetch("http://localhost:3001/chat/conversations", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      console.log("Conversations response status:", response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Conversations response error:", errorText);
-        throw new Error(
-          `Failed to load conversations: ${response.status} - ${errorText}`,
-        );
-      }
-
-      const data: Conversation[] = await response.json();
-      console.log("Loaded conversations:", data);
-      setConversations(data);
-
-      if (data.length > 0) {
-        handleConversationSelect(data[0]);
+      const list = care.length ? care : data || [];
+      setConversations(list);
+      await cache.preloadMany(list.map((c) => c.id));
+      if (list.length > 0) {
+        await openConversation(list[0]);
       } else {
         await createNewConversation();
       }
-    } catch (error) {
-      console.error("Failed to load conversations:", error);
+    } catch (err) {
       setError(
-        error instanceof Error ? error.message : "Failed to load conversations",
+        err instanceof Error ? err.message : "Failed to load conversations",
       );
-      await createNewConversation();
     } finally {
-      setIsLoading(false);
+      setBootLoading(false);
     }
-  }, [token, handleConversationSelect, createNewConversation]);
+  }, [token, cache, openConversation, createNewConversation]);
 
   useEffect(() => {
-    if (token) {
-      void loadConversations();
-    }
+    if (token) void loadConversations();
   }, [token, loadConversations]);
 
-  const sendMessage = async (content: string) => {
-    if (!currentConversation) {
-      console.error("No conversation available");
-      return;
-    }
-
-    if (!socket) {
-      console.error("No socket available");
-      return;
-    }
-
-    console.log("Sending message:", content);
-    console.log("Conversation ID:", currentConversation.id);
-    console.log("Socket connected:", socket.connected);
-
-    const newMessage: Message = {
-      id: `temp-${Date.now()}`,
-      text: content,
-      sender: "user",
-      timestamp: new Date(),
-      type: "text",
+  useEffect(() => {
+    if (!socket) return;
+    const onReceive = (message: ChatMessage) => {
+      cache.appendCached(message.conversationId || "", message);
+      if (
+        currentConversation &&
+        message.conversationId === currentConversation.id
+      ) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === message.id)) return prev;
+          return [
+            ...prev.filter((m) => !m.id.startsWith("temp-")),
+            toUiMessage(message, user?.id),
+          ];
+        });
+        void markConversationRead(currentConversation.id, token).then(() =>
+          refreshUnread(),
+        );
+      } else {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === message.conversationId
+              ? {
+                  ...c,
+                  unreadCount: (c.unreadCount || 0) + 1,
+                  messages: [
+                    {
+                      id: message.id,
+                      content: message.content,
+                      sender: message.sender,
+                      senderId: message.senderId,
+                      createdAt: message.createdAt,
+                    },
+                  ],
+                }
+              : c,
+          ),
+        );
+        void refreshUnread();
+      }
     };
+    socket.on("receiveMessage", onReceive);
+    return () => {
+      socket.off("receiveMessage", onReceive);
+    };
+  }, [socket, currentConversation, user?.id, cache, token, refreshUnread]);
 
-    setMessages((prev) => [...prev, newMessage]);
+  const handleSendMessage = () => {
+    if (!inputText.trim() || !currentConversation || !socket) return;
+    const content = inputText.trim();
+    setInputText("");
+    emitTyping(false);
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `temp-${Date.now()}`,
+        text: content,
+        sender: "user",
+        timestamp: new Date(),
+        type: "text",
+      },
+    ]);
 
     socket.emit("sendMessage", {
       conversationId: currentConversation.id,
-      content: content,
+      content,
     });
-
-    console.log("Message sent via socket");
   };
 
-  const handleSendMessage = () => {
-    if (!inputText.trim() && !selectedFile) return;
-
-    console.log("Handling send message:", inputText);
-    void sendMessage(inputText);
-    setInputText("");
-    setSelectedFile(null);
-  };
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
-  };
-
-  const removeSelectedFile = () => {
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const handleCall = () => {
-    alert("Initiating call with doctor...");
-  };
-
-  const handleVideoCall = () => {
-    alert("Initiating video call with doctor...");
-  };
-
-  const handleVoiceMessage = () => {
-    alert("Voice message feature coming soon...");
-  };
-
-  if (isLoading) {
+  if (bootLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 space-y-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-green-700">
-            Loading conversations...
-          </h3>
-        </div>
+      <div className="flex h-96 flex-col items-center justify-center space-y-4">
+        <Loader2 className="h-10 w-10 animate-spin text-[#1d884a]" />
+        <p className="text-sm text-gray-600">Loading conversations...</p>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !currentConversation) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+      <div className="flex h-96 flex-col items-center justify-center space-y-4">
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-red-700 mb-2">
+          <h3 className="mb-2 text-lg font-semibold text-red-700">
             Connection Error
           </h3>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="mb-4 text-gray-600">{error}</p>
           <Button
-            onClick={loadConversations}
+            onClick={() => void loadConversations()}
             className="bg-green-700 hover:bg-green-600"
           >
             Retry Connection
@@ -351,44 +232,44 @@ export default function ChatInterface() {
   }
 
   return (
-    <div className="flex h-96 bg-white border border-gray-200 rounded-lg shadow-lg">
-      {/* Conversations Sidebar */}
+    <div className="flex h-96 rounded-lg border border-gray-200 bg-white shadow-lg">
       <div className="w-80 border-r border-gray-200 bg-gray-50">
-        <div className="p-4 border-b border-gray-200">
+        <div className="border-b border-gray-200 p-4">
           <h3 className="font-semibold text-gray-800">Conversations</h3>
         </div>
-        <div className="overflow-y-auto h-full">
+        <div className="h-full overflow-y-auto">
           {conversations.length === 0 ? (
             <div className="p-4 text-center text-gray-500">
-              No conversations yet. Start chatting with a doctor!
+              No conversations yet. Start chatting with your care team!
             </div>
           ) : (
             conversations.map((conversation) => (
               <div
                 key={conversation.id}
-                onClick={() => handleConversationSelect(conversation)}
-                className={`p-4 border-b border-gray-200 cursor-pointer hover:bg-gray-100 ${
+                onClick={() => void openConversation(conversation)}
+                className={`cursor-pointer border-b border-gray-200 p-4 hover:bg-gray-100 ${
                   currentConversation?.id === conversation.id
                     ? "bg-green-50"
                     : ""
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-700 rounded-full flex items-center justify-center">
-                    <span className="text-white font-semibold">Dr</span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-700">
+                    <span className="font-semibold text-white">CT</span>
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-800">
-                      Dr. Gabriel Udoh
-                    </h4>
-                    <p className="text-sm text-gray-500">
-                      {(conversation.messages?.length ?? 0) > 0
-                        ? (
-                            conversation.messages?.[
-                              (conversation.messages?.length ?? 1) - 1
-                            ]?.content ?? ""
-                          ).substring(0, 30) + "..."
-                        : "No messages yet"}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="truncate font-medium text-gray-800">
+                        {conversation.peer?.fullName || "Care team"}
+                      </h4>
+                      {(conversation.unreadCount || 0) > 0 ? (
+                        <span className="rounded-full bg-green-700 px-2 py-0.5 text-[10px] font-semibold text-white">
+                          {conversation.unreadCount}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="truncate text-sm text-gray-500">
+                      {conversation.messages?.[0]?.content || "No messages yet"}
                     </p>
                   </div>
                 </div>
@@ -398,43 +279,24 @@ export default function ChatInterface() {
         </div>
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Chat Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-green-50">
+      <div className="flex flex-1 flex-col">
+        <div className="flex items-center justify-between border-b border-gray-200 bg-green-50 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-700 rounded-full flex items-center justify-center">
-              <span className="text-white font-semibold">Dr</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-700">
+              <span className="font-semibold text-white">CT</span>
             </div>
             <div>
-              <h3 className="font-semibold text-green-700">Dr. Gabriel Udoh</h3>
-              <p className="text-sm text-green-600">Online</p>
+              <h3 className="font-semibold text-green-700">
+                {currentConversation?.peer?.fullName || "Care team"}
+              </h3>
+              <ChatPeerStatus online={online} typing={peerTyping} />
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={handleCall}
-              variant="outline"
-              size="sm"
-              className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
-            >
-              <Phone className="h-4 w-4" />
-            </Button>
-            <Button
-              onClick={handleVideoCall}
-              variant="outline"
-              size="sm"
-              className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
-            >
-              <Video className="h-4 w-4" />
-            </Button>
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
           {messages.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
+            <div className="py-8 text-center text-gray-500">
               {currentConversation
                 ? "No messages yet. Start the conversation!"
                 : "Setting up your chat..."}
@@ -448,7 +310,7 @@ export default function ChatInterface() {
                 }`}
               >
                 <div
-                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                  className={`max-w-xs rounded-lg px-4 py-2 lg:max-w-md ${
                     message.sender === "user"
                       ? "bg-green-700 text-white"
                       : "bg-gray-100 text-gray-800"
@@ -462,12 +324,9 @@ export default function ChatInterface() {
                         alt="Shared image"
                         width={320}
                         height={240}
-                        className="max-w-full h-auto rounded"
+                        className="h-auto max-w-full rounded"
                         unoptimized
                       />
-                      <p className="text-xs mt-1 opacity-75">
-                        {message.fileName}
-                      </p>
                     </div>
                   )}
                   {message.type === "file" && (
@@ -476,7 +335,7 @@ export default function ChatInterface() {
                       <span>{message.fileName}</span>
                     </div>
                   )}
-                  <p className="text-xs opacity-75 mt-1">
+                  <p className="mt-1 text-xs opacity-75">
                     {message.timestamp.toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -486,66 +345,18 @@ export default function ChatInterface() {
               </div>
             ))
           )}
-
           <div ref={messagesEndRef} />
         </div>
 
-        {/* File Preview */}
-        {selectedFile && (
-          <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {selectedFile.type.startsWith("image/") ? (
-                  <ImageIcon className="h-4 w-4 text-green-700" />
-                ) : (
-                  <File className="h-4 w-4 text-green-700" />
-                )}
-                <span className="text-sm text-gray-700">
-                  {selectedFile.name}
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={removeSelectedFile}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Input Area */}
-        <div className="p-4 border-t border-gray-200">
+        <div className="border-t border-gray-200 p-4">
           <div className="flex items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              onChange={handleFileSelect}
-              className="hidden"
-              accept="image/*,.pdf,.doc,.docx"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
-            >
-              <Paperclip className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleVoiceMessage}
-              className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
-            >
-              <Mic className="h-4 w-4" />
-            </Button>
             <Input
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="Type your message..."
+              onChange={(e) => {
+                setInputText(e.target.value);
+                emitTyping(Boolean(e.target.value.trim()));
+              }}
+              placeholder="Message your care team..."
               onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
               className="flex-1"
             />

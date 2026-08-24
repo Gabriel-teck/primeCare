@@ -1,85 +1,64 @@
 "use client";
 
-import AdminDashoardSidebar from "./AdminDashboardSidebar";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useState } from "react";
-import { X, Menu } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { Menu, X } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/context/AuthContext";
+import AdminDashboardSidebar from "./AdminDashboardSidebar";
 
-export default function AdminDashoardHeader() {
+export default function AdminDashboardHeader() {
   const [showSidebar, setShowSidebar] = useState(false);
-  const pathname = usePathname();
-
-  // Mapping of paths to page names
-  const getPageName = (path: string) => {
-    const pageMap: { [key: string]: string } = {
-      "/admin-dashboard": "Admin Dashboard",
-      "/admin-dashboard/admin-appointments": "Appointments",
-      "/admin-dashboard/admin-chats": "Messages and Chats",
-      "/admin-dashboard/admin-patients": "Patient History",
-    };
-
-    return pageMap[path] || "Admin Dashboard";
-  };
-
-  const currentPageName = getPageName(pathname);
+  const { user } = useAuth();
+  const initials =
+    user?.fullName
+      ?.split(" ")
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "AD";
 
   return (
     <>
-      <header className="mx-auto fixed top-0 z-50 w-full lg:w-[calc(100%-15rem)] flex items-center justify-between bg-white border-b border-gray-200 px-4 sm:px-12 py-3 lg:ml-60">
-        <div className="lg:hidden">
+      <header className="fixed top-0 z-50 mx-auto flex w-full max-w-full items-center justify-between gap-2 border-b border-gray-200 bg-white px-3 py-3 sm:px-8 lg:ml-60 lg:w-[calc(100%-15rem)]">
+        <div className="shrink-0 lg:hidden">
           <button
-            onClick={() => setShowSidebar(!showSidebar)}
-            className="p-2 rounded-md transition-colors cursor-pointer hover:bg-gray-100"
+            onClick={() => setShowSidebar((v) => !v)}
+            className="cursor-pointer rounded-md p-2 hover:bg-gray-100"
+            aria-label="Toggle menu"
           >
             {showSidebar ? (
-              <X className="w-6 h-6 text-[#1d884a]" />
+              <X className="h-6 w-6 text-[#1d884a]" />
             ) : (
-              <Menu className="w-6 h-6 text-[#1d884a]" />
+              <Menu className="h-6 w-6 text-[#1d884a]" />
             )}
           </button>
         </div>
 
-        {/* Desktop logo and page name - hidden on mobile */}
-        <div className="hidden lg:flex items-center gap-6">
-          <div className="text-[20px] font-semibold text-[#212529]">
-            {currentPageName}
-          </div>
-        </div>
+        <div className="hidden flex-1 lg:block" />
 
-        {/* Mobile page name - visible only on mobile */}
-        <div className="lg:hidden flex-1 text-center">
-          <h1 className="text-lg font-semibold text-[#14d">
-            {currentPageName}
-          </h1>
-        </div>
-
-        {/* Right side header content */}
-
-        <div className="flex items-center gap-6">
-          <div className="hidden lg:block text-[20px] font-semibold text-[#212529] ">
-            <h2>Dr Gabriel</h2>
-          </div>
-          <Avatar className="w-8 h-8">
-            <AvatarImage src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=2960&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" />
-            <AvatarFallback>JD</AvatarFallback>
+        <div className="ml-auto flex select-none items-center gap-2 px-1 pointer-events-none">
+          <span className="hidden max-w-[160px] truncate text-sm font-semibold text-[#212529] sm:inline">
+            {user?.fullName || "Admin"}
+          </span>
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="bg-green-100 text-green-700">
+              {initials}
+            </AvatarFallback>
           </Avatar>
         </div>
-
-        {/* Mobile Sidebar Overlay */}
-        {showSidebar && (
-          <div
-            className="fixed inset-0 bg-black/50 bg-opacity-50 z-40 lg:hidden"
-            onClick={() => setShowSidebar(false)}
-          />
-        )}
-
-        {/* Mobile Sidebar */}
-        <AdminDashoardSidebar
-          isOpen={showSidebar}
-          onClose={() => setShowSidebar(false)}
-        />
       </header>
+
+      {showSidebar ? (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setShowSidebar(false)}
+        />
+      ) : null}
+
+      <AdminDashboardSidebar
+        isOpen={showSidebar}
+        onClose={() => setShowSidebar(false)}
+      />
     </>
   );
 }
