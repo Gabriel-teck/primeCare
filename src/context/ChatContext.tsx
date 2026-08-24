@@ -8,6 +8,7 @@ import {
   ReactNode,
 } from "react";
 import { Message } from "@/types/chat";
+import { getMessages, listConversations } from "@/lib/api/chat";
 import { useSocket } from "./SocketContext";
 import { useAuth } from "./AuthContext";
 
@@ -117,16 +118,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     try {
       setIsLoading(true);
-      const response = await fetch("http://localhost:3001/chat/conversations", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setConversations(data);
-      }
+      const data = await listConversations(token);
+      setConversations(data as Conversation[]);
     } catch (error) {
       console.error("Failed to load conversations:", error);
     } finally {
@@ -139,27 +132,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     try {
       setIsLoading(true);
-      const response = await fetch(
-        `http://localhost:3001/chat/conversations/${conversationId}/messages`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (response.ok) {
-        const data: ChatApiMessage[] = await response.json();
-        const formattedMessages: Message[] = data.map((msg) => ({
-          id: msg.id,
-          text: msg.content,
-          sender: msg.sender === "admin" ? "doctor" : "user",
-          timestamp: new Date(msg.createdAt),
-          type: "text",
-        }));
-        setMessages(formattedMessages);
-        joinConversation(conversationId);
-      }
+      const data = await getMessages(conversationId, token);
+      const formattedMessages: Message[] = data.map((msg) => ({
+        id: msg.id,
+        text: msg.content,
+        sender: msg.sender === "admin" ? "doctor" : "user",
+        timestamp: new Date(msg.createdAt),
+        type: "text",
+      }));
+      setMessages(formattedMessages);
+      joinConversation(conversationId);
     } catch (error) {
       console.error("Failed to load messages:", error);
     } finally {
