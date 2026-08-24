@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { listCatalog } from "@/lib/api/catalog";
@@ -59,14 +60,17 @@ export default function UrgentCareConditions() {
       {items.map((item) => (
         <Button
           key={item.id}
+          asChild
           variant="ghost"
           size="xl"
-          className="bg-[#ffff] text-[16px] font-bold leading-5 text-left text-[rgb(29,136,74)] flex justify-between border-1 border-[rgb(29,136,74)] rounded-[50px] pt-[16px] pr-[20px] pb-[15px] pl-[25px]"
+          className="w-full bg-[#ffff] text-[16px] font-bold leading-5 text-left text-[rgb(29,136,74)] flex justify-between border-1 border-[rgb(29,136,74)] rounded-[50px] pt-[16px] pr-[20px] pb-[15px] pl-[25px]"
         >
-          {item.name}
-          <span className="rounded-full bg-green-100 p-0.5">
-            <ChevronRight />
-          </span>
+          <Link href={`/care-service/${item.id}`}>
+            <span className="truncate">{item.name}</span>
+            <span className="rounded-full bg-green-100 p-0.5 shrink-0">
+              <ChevronRight />
+            </span>
+          </Link>
         </Button>
       ))}
     </div>
