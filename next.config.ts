@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 import path from "path";
+import { API_BASE_URL } from "./src/lib/api/config";
 
-const apiUrl =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
-  "http://localhost:3001";
+const apiUrl = API_BASE_URL;
 
 let apiHostname = "localhost";
 let apiProtocol: "http" | "https" = "http";
